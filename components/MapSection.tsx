@@ -4,11 +4,15 @@ import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import useCurrentlocation from "@/hooks/useCurrentlocation";
 import useRestaurants from "@/hooks/useRestaurants";
+import useDebounce from "@/hooks/useDebounce";
 
 function MapSection() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [radius, setRadius] = useState(1000);
+  const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
+  const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
   const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
@@ -69,6 +73,35 @@ function MapSection() {
   useEffect(() => {
     if (!mapReady) return;
     if (!mapRef.current) return;
+    if (latitude === null || longitude === null) return;
+
+    const currentPosition = new window.kakao.maps.LatLng(latitude, longitude);
+
+    if (radiusCircleRef.current) {
+      radiusCircleRef.current.setMap(null);
+    }
+
+    radiusCircleRef.current = new window.kakao.maps.Circle({
+      center: currentPosition,
+      radius,
+      strokeWeight: 2,
+      strokeColor: "#3B82F6",
+      strokeOpacity: 0.8,
+      fillOpacity: 0,
+    });
+
+    radiusCircleRef.current.setMap(mapRef.current);
+  }, [latitude, longitude, radius, mapReady]);
+
+  useEffect(() => {
+    if (latitude === null || longitude === null) return;
+
+    fetchRestaurants(latitude, longitude, debouncedRadius);
+  }, [latitude, longitude, debouncedRadius, fetchRestaurants]);
+
+  useEffect(() => {
+    if (!mapReady) return;
+    if (!mapRef.current) return;
 
     restaurantMarkersRef.current.forEach((marker) => {
       marker.setMap(null);
@@ -98,16 +131,35 @@ function MapSection() {
         onLoad={handleLoad}
       />
       <div ref={mapContainerRef} className="h-96 w-full" />
-      <button
-        onClick={() => {
-          if (latitude === null || longitude === null) return;
 
-          fetchRestaurants(latitude, longitude);
-        }}
-        disabled={loading}
-      >
-        {loading ? "불러오는 중..." : "주변 맛집 불러오기"}
-      </button>
+      <div className="p-4">
+        <div className="mb-2 flex justify-between">
+          <span className="font-medium">검색 반경</span>
+
+          <span className="font-bold">
+            {radius >= 1000 ? `${(radius / 1000).toFixed(1)}km` : `${radius}m`}
+          </span>
+        </div>
+
+        <input
+          type="range"
+          min={100}
+          max={5000}
+          step={100}
+          value={radius}
+          onChange={(e) => {
+            setRadius(Number(e.target.value));
+          }}
+          className="w-full accent-blue-600"
+        />
+
+        <div className="mt-1 flex justify-between text-sm text-gray-500">
+          <span>100m</span>
+          <span>5km</span>
+        </div>
+      </div>
+
+      {loading && <p>맛집을 불러오는 중...</p>}
 
       {error && <p>{error}</p>}
       <ul>
