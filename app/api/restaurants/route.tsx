@@ -1,12 +1,14 @@
 export async function POST(request: Request) {
-  const { latitude, longitude } = await request.json();
+  const { latitude, longitude, radius } = await request.json();
 
-  if (latitude == null || longitude == null) {
+  if (latitude == null || longitude == null || radius == null) {
     return Response.json(
       { message: "위치 정보가 필요합니다." },
       { status: 400 },
     );
   }
+
+  const safeRadius = Math.min(5000, Math.max(100, Number(radius)));
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
 
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
               latitude,
               longitude,
             },
-            radius: 3000,
+            radius: safeRadius,
           },
         },
         rankPreference: "POPULARITY",

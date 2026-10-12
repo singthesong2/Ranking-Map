@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 interface Restaurant {
   id: string;
@@ -25,32 +25,37 @@ function useRestaurants() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchRestaurants = async (latitude: number, longitude: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch("/api/restaurants", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          latitude,
-          longitude,
-        }),
-      });
+  const fetchRestaurants = useCallback(
+    async (latitude: number, longitude: number, radius: number) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      if (!response.ok) throw new Error();
+        const response = await fetch("/api/restaurants", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            latitude,
+            longitude,
+            radius,
+          }),
+        });
 
-      const data: RestaurantsResponse = await response.json();
+        if (!response.ok) throw new Error();
 
-      setRestaurants(data.places ?? []);
-    } catch {
-      setError("맛집 정보를 불러오지 못했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  };
+        const data: RestaurantsResponse = await response.json();
+
+        setRestaurants(data.places ?? []);
+      } catch {
+        setError("맛집 정보를 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   return {
     restaurants,
