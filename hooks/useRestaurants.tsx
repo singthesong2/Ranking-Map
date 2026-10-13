@@ -1,20 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-
-interface Restaurant {
-  id: string;
-  displayName: {
-    text: string;
-  };
-  formattedAddress: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  rating?: number;
-  userRatingCount?: number;
-}
+import type { RestaurantCategory } from "@/types/restaurant";
+import type { Restaurant } from "@/types/restaurant";
 
 interface RestaurantsResponse {
   places?: Restaurant[];
@@ -26,7 +14,12 @@ function useRestaurants() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchRestaurants = useCallback(
-    async (latitude: number, longitude: number, radius: number) => {
+    async (
+      latitude: number,
+      longitude: number,
+      radius: number,
+      category: RestaurantCategory,
+    ) => {
       try {
         setLoading(true);
         setError(null);
@@ -40,6 +33,7 @@ function useRestaurants() {
             latitude,
             longitude,
             radius,
+            category,
           }),
         });
 
