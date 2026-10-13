@@ -5,8 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import useCurrentlocation from "@/hooks/useCurrentlocation";
 import useRestaurants from "@/hooks/useRestaurants";
 import useDebounce from "@/hooks/useDebounce";
+import type { RestaurantCategory } from "@/types/restaurant";
 
-function MapSection() {
+interface MapSectionProps {
+  selectedCategory: RestaurantCategory;
+}
+
+function MapSection({ selectedCategory }: MapSectionProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -96,8 +101,14 @@ function MapSection() {
   useEffect(() => {
     if (latitude === null || longitude === null) return;
 
-    fetchRestaurants(latitude, longitude, debouncedRadius);
-  }, [latitude, longitude, debouncedRadius, fetchRestaurants]);
+    fetchRestaurants(latitude, longitude, debouncedRadius, selectedCategory);
+  }, [
+    latitude,
+    longitude,
+    debouncedRadius,
+    selectedCategory,
+    fetchRestaurants,
+  ]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -169,6 +180,8 @@ function MapSection() {
             {" / "}⭐ {restaurant.rating ?? "정보 없음"}
             {" / "}
             리뷰 {restaurant.userRatingCount ?? 0}개
+            <p>primaryType: {restaurant.primaryType ?? "값 없음"}</p>
+            <p>types: {restaurant.types?.join(", ") ?? "값 없음"}</p>
           </li>
         ))}
       </ul>
