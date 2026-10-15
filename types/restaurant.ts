@@ -33,3 +33,5 @@ export interface Restaurant {
   types?: string[];
   primaryType?: string;
 }
+
+export type RestaurantSort = "recommended" | "rating" | "reviews" | "distance";
