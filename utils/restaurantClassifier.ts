@@ -1,5 +1,17 @@
 import type { Restaurant, RestaurantCategory } from "@/types/restaurant";
 
+export function isExcludedRestaurant(restaurant: Restaurant) {
+  const name = restaurant.displayName.text.toLowerCase();
+
+  return (
+    name.includes("스터디카페") ||
+    name.includes("스터디 카페") ||
+    name.includes("study cafe") ||
+    name.includes("study café") ||
+    name.includes("독서실")
+  );
+}
+
 export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
   const name = restaurant.displayName.text.toLowerCase();
 
@@ -11,7 +23,13 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
     return "shabu";
   }
 
-  if (name.includes("마라탕") || name.includes("훠궈")) {
+  if (
+    name.includes("마라탕") ||
+    name.includes("마라샹궈") ||
+    name.includes("훠궈") ||
+    name.includes("mara") ||
+    name.includes("malatang")
+  ) {
     return "mala";
   }
 
@@ -48,6 +66,15 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
     return "meat";
   }
 
+  if (
+    name.includes("포차") ||
+    name.includes("포장마차") ||
+    name.includes("호프") ||
+    name.includes("이자카야")
+  ) {
+    return "bar";
+  }
+
   switch (restaurant.primaryType) {
     case "korean_restaurant":
       return "korean";
@@ -57,6 +84,22 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
 
     case "japanese_restaurant":
       return "japanese";
+
+    case "western_restaurant":
+    case "european_restaurant":
+    case "italian_restaurant":
+    case "french_restaurant":
+    case "american_restaurant":
+      return "western";
+
+    case "thai_restaurant":
+    case "vietnamese_restaurant":
+    case "indonesian_restaurant":
+    case "malaysian_restaurant":
+    case "filipino_restaurant":
+    case "cambodian_restaurant":
+    case "burmese_restaurant":
+      return "southeastAsian";
 
     case "cafe":
     case "coffee_shop":
