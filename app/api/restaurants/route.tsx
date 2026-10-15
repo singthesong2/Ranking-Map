@@ -188,6 +188,6 @@ export async function POST(request: Request) {
         );
 
   return Response.json({
-    places: filteredPlaces.slice(0, 10),
+    places: filteredPlaces,
   });
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import useCurrentlocation from "@/hooks/useCurrentlocation";
 import useRestaurants from "@/hooks/useRestaurants";
 import useDebounce from "@/hooks/useDebounce";
-import type { RestaurantCategory } from "@/types/restaurant";
+import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
+import { calculateDistance } from "@/utils/calculateDistance";
 
 interface MapSectionProps {
   selectedCategory: RestaurantCategory;
@@ -16,6 +17,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [radius, setRadius] = useState(1000);
+  const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
@@ -36,7 +38,6 @@ function MapSection({ selectedCategory }: MapSectionProps) {
 
     window.kakao.maps.load(() => {
       const center = new window.kakao.maps.LatLng(37.5665, 126.978);
-
       const options = {
         center,
         level: 3,
@@ -48,6 +49,51 @@ function MapSection({ selectedCategory }: MapSectionProps) {
       setMapReady(true);
     });
   };
+
+  const displayRestaurants = useMemo(() => {
+    if (latitude === null || longitude === null) return [];
+
+    const radiusRestaurants = restaurants.filter((restaurant) => {
+      const distance = calculateDistance(
+        latitude,
+        longitude,
+        restaurant.location.latitude,
+        restaurant.location.longitude,
+      );
+
+      return distance <= radius;
+    });
+
+    const sortedRestaurants = [...radiusRestaurants];
+
+    if (sortOption === "rating")
+      sortedRestaurants.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+
+    if (sortOption === "reviews")
+      sortedRestaurants.sort(
+        (a, b) => (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
+      );
+
+    if (sortOption === "distance") {
+      sortedRestaurants.sort((a, b) => {
+        const distanceA = calculateDistance(
+          latitude,
+          longitude,
+          a.location.latitude,
+          a.location.longitude,
+        );
+
+        const distanceB = calculateDistance(
+          latitude,
+          longitude,
+          b.location.latitude,
+          b.location.longitude,
+        );
+        return distanceA - distanceB;
+      });
+    }
+    return sortedRestaurants.slice(0, 10);
+  }, [restaurants, sortOption, latitude, longitude, radius]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -82,9 +128,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
 
     const currentPosition = new window.kakao.maps.LatLng(latitude, longitude);
 
-    if (radiusCircleRef.current) {
-      radiusCircleRef.current.setMap(null);
-    }
+    if (radiusCircleRef.current) radiusCircleRef.current.setMap(null);
 
     radiusCircleRef.current = new window.kakao.maps.Circle({
       center: currentPosition,
@@ -118,7 +162,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
       marker.setMap(null);
     });
 
-    const markers = restaurants.map((restaurant) => {
+    const markers = displayRestaurants.map((restaurant) => {
       const position = new window.kakao.maps.LatLng(
         restaurant.location.latitude,
         restaurant.location.longitude,
@@ -132,7 +176,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
     });
 
     restaurantMarkersRef.current = markers;
-  }, [restaurants, mapReady]);
+  }, [displayRestaurants, mapReady]);
 
   return (
     <section>
@@ -151,6 +195,46 @@ function MapSection({ selectedCategory }: MapSectionProps) {
             {radius >= 1000 ? `${(radius / 1000).toFixed(1)}km` : `${radius}m`}
           </span>
         </div>
+        <button
+          onClick={() => setSortOption("recommended")}
+          className={
+            sortOption === "recommended"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          추천순
+        </button>
+        <button
+          onClick={() => setSortOption("rating")}
+          className={
+            sortOption === "rating"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          평점순
+        </button>
+        <button
+          onClick={() => setSortOption("reviews")}
+          className={
+            sortOption === "reviews"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          리뷰 많은 순
+        </button>
+        <button
+          onClick={() => setSortOption("distance")}
+          className={
+            sortOption === "distance"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          가까운 순
+        </button>
 
         <input
           type="range"
@@ -174,7 +258,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
 
       {error && <p>{error}</p>}
       <ul>
-        {restaurants.map((restaurant) => (
+        {displayRestaurants.map((restaurant) => (
           <li key={restaurant.id}>
             {restaurant.displayName.text}
             {" / "}⭐ {restaurant.rating ?? "정보 없음"}
