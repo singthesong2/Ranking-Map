@@ -1,27 +1,36 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useRef, useState, useMemo } from "react";
-import useCurrentlocation from "@/hooks/useCurrentlocation";
-import useRestaurants from "@/hooks/useRestaurants";
-import useDebounce from "@/hooks/useDebounce";
-import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
-import { calculateDistance } from "@/utils/calculateDistance";
+import { useEffect, useRef, useState } from "react";
+import type { Restaurant, RestaurantSort } from "@/types/restaurant";
 
 interface MapSectionProps {
-  selectedCategory: RestaurantCategory;
+  latitude: number | null;
+  longitude: number | null;
+  radius: number;
+  onRadiusChange: (radius: number) => void;
+  sortOption: RestaurantSort;
+  onSortChange: (sort: RestaurantSort) => void;
+  restaurants: Restaurant[];
+  loading: boolean;
+  error: string | null;
 }
 
-function MapSection({ selectedCategory }: MapSectionProps) {
+function MapSection({
+  latitude,
+  longitude,
+  radius,
+  onRadiusChange,
+  sortOption,
+  onSortChange,
+  restaurants,
+  loading,
+  error,
+}: MapSectionProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [radius, setRadius] = useState(1000);
-  const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
-  const debouncedRadius = useDebounce(radius, 1000);
-  const { latitude, longitude } = useCurrentlocation();
-  const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const restaurantMarkersRef = useRef<kakao.maps.Marker[]>([]);
 
@@ -49,51 +58,6 @@ function MapSection({ selectedCategory }: MapSectionProps) {
       setMapReady(true);
     });
   };
-
-  const displayRestaurants = useMemo(() => {
-    if (latitude === null || longitude === null) return [];
-
-    const radiusRestaurants = restaurants.filter((restaurant) => {
-      const distance = calculateDistance(
-        latitude,
-        longitude,
-        restaurant.location.latitude,
-        restaurant.location.longitude,
-      );
-
-      return distance <= radius;
-    });
-
-    const sortedRestaurants = [...radiusRestaurants];
-
-    if (sortOption === "rating")
-      sortedRestaurants.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-
-    if (sortOption === "reviews")
-      sortedRestaurants.sort(
-        (a, b) => (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
-      );
-
-    if (sortOption === "distance") {
-      sortedRestaurants.sort((a, b) => {
-        const distanceA = calculateDistance(
-          latitude,
-          longitude,
-          a.location.latitude,
-          a.location.longitude,
-        );
-
-        const distanceB = calculateDistance(
-          latitude,
-          longitude,
-          b.location.latitude,
-          b.location.longitude,
-        );
-        return distanceA - distanceB;
-      });
-    }
-    return sortedRestaurants.slice(0, 10);
-  }, [restaurants, sortOption, latitude, longitude, radius]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -143,18 +107,6 @@ function MapSection({ selectedCategory }: MapSectionProps) {
   }, [latitude, longitude, radius, mapReady]);
 
   useEffect(() => {
-    if (latitude === null || longitude === null) return;
-
-    fetchRestaurants(latitude, longitude, debouncedRadius, selectedCategory);
-  }, [
-    latitude,
-    longitude,
-    debouncedRadius,
-    selectedCategory,
-    fetchRestaurants,
-  ]);
-
-  useEffect(() => {
     if (!mapReady) return;
     if (!mapRef.current) return;
 
@@ -162,7 +114,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
       marker.setMap(null);
     });
 
-    const markers = displayRestaurants.map((restaurant) => {
+    const markers = restaurants.map((restaurant) => {
       const position = new window.kakao.maps.LatLng(
         restaurant.location.latitude,
         restaurant.location.longitude,
@@ -176,7 +128,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
     });
 
     restaurantMarkersRef.current = markers;
-  }, [displayRestaurants, mapReady]);
+  }, [restaurants, mapReady]);
 
   return (
     <section>
@@ -186,17 +138,15 @@ function MapSection({ selectedCategory }: MapSectionProps) {
         onLoad={handleLoad}
       />
       <div ref={mapContainerRef} className="h-96 w-full" />
-
       <div className="p-4">
         <div className="mb-2 flex justify-between">
           <span className="font-medium">검색 반경</span>
-
           <span className="font-bold">
             {radius >= 1000 ? `${(radius / 1000).toFixed(1)}km` : `${radius}m`}
           </span>
         </div>
         <button
-          onClick={() => setSortOption("recommended")}
+          onClick={() => onSortChange("recommended")}
           className={
             sortOption === "recommended"
               ? "rounded-full bg-blue-600 px-4 py-2 text-white"
@@ -206,7 +156,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
           추천순
         </button>
         <button
-          onClick={() => setSortOption("rating")}
+          onClick={() => onSortChange("rating")}
           className={
             sortOption === "rating"
               ? "rounded-full bg-blue-600 px-4 py-2 text-white"
@@ -216,7 +166,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
           평점순
         </button>
         <button
-          onClick={() => setSortOption("reviews")}
+          onClick={() => onSortChange("reviews")}
           className={
             sortOption === "reviews"
               ? "rounded-full bg-blue-600 px-4 py-2 text-white"
@@ -226,7 +176,7 @@ function MapSection({ selectedCategory }: MapSectionProps) {
           리뷰 많은 순
         </button>
         <button
-          onClick={() => setSortOption("distance")}
+          onClick={() => onSortChange("distance")}
           className={
             sortOption === "distance"
               ? "rounded-full bg-blue-600 px-4 py-2 text-white"
@@ -235,7 +185,6 @@ function MapSection({ selectedCategory }: MapSectionProps) {
         >
           가까운 순
         </button>
-
         <input
           type="range"
           min={100}
@@ -243,32 +192,15 @@ function MapSection({ selectedCategory }: MapSectionProps) {
           step={100}
           value={radius}
           onChange={(e) => {
-            setRadius(Number(e.target.value));
+            onRadiusChange(Number(e.target.value));
           }}
           className="w-full accent-blue-600"
         />
-
         <div className="mt-1 flex justify-between text-sm text-gray-500">
           <span>100m</span>
           <span>5km</span>
         </div>
       </div>
-
-      {loading && <p>맛집을 불러오는 중...</p>}
-
-      {error && <p>{error}</p>}
-      <ul>
-        {displayRestaurants.map((restaurant) => (
-          <li key={restaurant.id}>
-            {restaurant.displayName.text}
-            {" / "}⭐ {restaurant.rating ?? "정보 없음"}
-            {" / "}
-            리뷰 {restaurant.userRatingCount ?? 0}개
-            <p>primaryType: {restaurant.primaryType ?? "값 없음"}</p>
-            <p>types: {restaurant.types?.join(", ") ?? "값 없음"}</p>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }
