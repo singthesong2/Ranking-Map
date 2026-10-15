@@ -1,5 +1,8 @@
 import type { Restaurant, RestaurantCategory } from "@/types/restaurant";
-import { classifyRestaurant } from "@/utils/restaurantClassifier";
+import {
+  classifyRestaurant,
+  isExcludedRestaurant,
+} from "@/utils/restaurantClassifier";
 import { calculateDistance } from "@/utils/calculateDistance";
 
 export async function POST(request: Request) {
@@ -180,10 +183,13 @@ export async function POST(request: Request) {
     places?: Restaurant[];
   } = await response.json();
   const places = data.places ?? [];
+  const deletePlaces = places.filter(
+    (restaurant) => !isExcludedRestaurant(restaurant),
+  );
   const filteredPlaces =
     category === "all"
-      ? places
-      : places.filter(
+      ? deletePlaces
+      : deletePlaces.filter(
           (restaurant) => classifyRestaurant(restaurant) === category,
         );
 
