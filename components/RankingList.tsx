@@ -1,12 +1,35 @@
 import type { Restaurant } from "@/types/restaurant";
+import {
+  calculateDistance,
+  calculateWalkingMinutes,
+} from "@/utils/calculateDistance";
 
 interface RankingListProps {
   restaurants: Restaurant[];
+  latitude: number | null;
+  longitude: number | null;
   hasMore: boolean;
   onLoadMore: () => void;
 }
 
-function RankingList({ restaurants, hasMore, onLoadMore }: RankingListProps) {
+function RankingList({
+  restaurants,
+  latitude,
+  longitude,
+  hasMore,
+  onLoadMore,
+}: RankingListProps) {
+  const getWalkingMinutes = (restaurant: Restaurant) =>
+    latitude !== null && longitude !== null
+      ? calculateWalkingMinutes(
+          calculateDistance(
+            latitude,
+            longitude,
+            restaurant.location.latitude,
+            restaurant.location.longitude,
+          ),
+        )
+      : null;
   return (
     <section className="p-4">
       <h2 className="mb-4 text-xl font-bold">맛집 랭킹</h2>
@@ -26,6 +49,9 @@ function RankingList({ restaurants, hasMore, onLoadMore }: RankingListProps) {
                 <div className="mt-1 flex gap-3 text-sm">
                   <span>⭐ {restaurant.rating ?? "정보 없음"}</span>
                   <span>리뷰 {restaurant.userRatingCount ?? 0}개</span>
+                  {getWalkingMinutes(restaurant) !== null && (
+                    <span>도보 약 {getWalkingMinutes(restaurant)}분</span>
+                  )}
                 </div>
               </div>
             </div>

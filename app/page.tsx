@@ -109,6 +109,8 @@ function Home() {
       />
       <RankingList
         restaurants={displayRestaurants}
+        latitude={latitude}
+        longitude={longitude}
         hasMore={hasMore}
         onLoadMore={() => {
           setVisibleCount((prev) => prev + 10);
