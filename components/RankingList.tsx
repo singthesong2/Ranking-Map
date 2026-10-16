@@ -2,9 +2,11 @@ import type { Restaurant } from "@/types/restaurant";
 
 interface RankingListProps {
   restaurants: Restaurant[];
+  hasMore: boolean;
+  onLoadMore: () => void;
 }
 
-function RankingList({ restaurants }: RankingListProps) {
+function RankingList({ restaurants, hasMore, onLoadMore }: RankingListProps) {
   return (
     <section className="p-4">
       <h2 className="mb-4 text-xl font-bold">맛집 랭킹</h2>
@@ -30,6 +32,14 @@ function RankingList({ restaurants }: RankingListProps) {
           </a>
         ))}
       </div>
+      {hasMore && (
+        <button
+          onClick={onLoadMore}
+          className="mt-6 w-full rounded-lg border border-gray-300 py-3 font-medium hover:bg-gray-50"
+        >
+          더보기
+        </button>
+      )}
     </section>
   );
 }

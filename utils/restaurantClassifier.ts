@@ -24,6 +24,7 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
   }
 
   if (
+    name.includes("마라") ||
     name.includes("마라탕") ||
     name.includes("마라샹궈") ||
     name.includes("훠궈") ||
@@ -39,6 +40,15 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
     name.includes("닭강정")
   ) {
     return "chicken";
+  }
+
+  if (
+    name.includes("햄버거") ||
+    name.includes("버거") ||
+    name.includes("수제버거") ||
+    name.includes("burger")
+  ) {
+    return "burger";
   }
 
   if (
@@ -59,6 +69,8 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
     name.includes("한우") ||
     name.includes("소고기") ||
     name.includes("돼지고기") ||
+    name.includes("오리") ||
+    name.includes("염소") ||
     name.includes("곱창") ||
     name.includes("막창") ||
     name.includes("대창")
@@ -91,6 +103,9 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
     case "french_restaurant":
     case "american_restaurant":
       return "western";
+
+    case "hamburger_restaurant":
+      return "burger";
 
     case "thai_restaurant":
     case "vietnamese_restaurant":

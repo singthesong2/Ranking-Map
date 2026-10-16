@@ -8,6 +8,7 @@ export type RestaurantCategory =
   | "shabu"
   | "mala"
   | "chicken"
+  | "burger"
   | "curry"
   | "southeastAsian"
   | "cafe"
