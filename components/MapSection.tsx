@@ -124,6 +124,13 @@ function MapSection({
         position,
       });
       marker.setMap(mapRef.current);
+
+      window.kakao.maps.event.addListener(marker, "click", () => {
+        if (!restaurant.googleMapsUri) return;
+
+        window.open(restaurant.googleMapsUri, "_blank", "noopener,noreferrer");
+      });
+
       return marker;
     });
 
