@@ -33,6 +33,7 @@ function MapSection({
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const restaurantMarkersRef = useRef<kakao.maps.Marker[]>([]);
+  const hoverMark = useRef<kakao.maps.CustomOverlay | null>(null);
 
   const createCurrentLocationMarker = () => {
     const marker = document.createElement("div");
@@ -110,9 +111,16 @@ function MapSection({
     if (!mapReady) return;
     if (!mapRef.current) return;
 
+    const map = mapRef.current;
+
     restaurantMarkersRef.current.forEach((marker) => {
       marker.setMap(null);
     });
+
+    if (hoverMark.current) {
+      hoverMark.current.setMap(null);
+      hoverMark.current = null;
+    }
 
     const markers = restaurants.map((restaurant) => {
       const position = new window.kakao.maps.LatLng(
@@ -124,6 +132,53 @@ function MapSection({
         position,
       });
       marker.setMap(mapRef.current);
+
+      window.kakao.maps.event.addListener(marker, "mouseover", () => {
+        if (hoverMark.current) hoverMark.current.setMap(null);
+
+        const infoBox = document.createElement("div");
+
+        infoBox.style.pointerEvents = "none";
+        infoBox.style.backgroundColor = "white";
+        infoBox.style.border = "1px solid #e5e7eb";
+        infoBox.style.borderRadius = "8px";
+        infoBox.style.padding = "8px 12px";
+        infoBox.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+        infoBox.style.whiteSpace = "nowrap";
+
+        const name = document.createElement("div");
+
+        name.textContent = restaurant.displayName.text;
+        name.style.fontSize = "14px";
+        name.style.fontWeight = "700";
+        name.style.color = "#111827";
+
+        const info = document.createElement("div");
+
+        info.textContent = `⭐ ${restaurant.rating ?? "정보 없음"} / 리뷰 ${restaurant.userRatingCount ?? 0}개`;
+        info.style.marginTop = "4px";
+        info.style.fontSize = "12px";
+        info.style.color = "#6b7280";
+        infoBox.appendChild(name);
+        infoBox.appendChild(info);
+
+        hoverMark.current = new window.kakao.maps.CustomOverlay({
+          position,
+          content: infoBox,
+          xAnchor: 0.5,
+          yAnchor: 1.7,
+          zIndex: 20,
+        });
+
+        hoverMark.current.setMap(map);
+      });
+
+      window.kakao.maps.event.addListener(marker, "mouseout", () => {
+        if (hoverMark.current) {
+          hoverMark.current.setMap(null);
+          hoverMark.current = null;
+        }
+      });
 
       window.kakao.maps.event.addListener(marker, "click", () => {
         if (!restaurant.googleMapsUri) return;

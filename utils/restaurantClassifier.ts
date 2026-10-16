@@ -45,6 +45,7 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
   if (
     name.includes("햄버거") ||
     name.includes("버거") ||
+    name.includes("맥도날드") ||
     name.includes("burger")
   ) {
     return "burger";
@@ -102,6 +103,11 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
     case "french_restaurant":
     case "american_restaurant":
       return "western";
+
+    case "korean_barbecue_restaurant":
+    case "barbecue_restaurant":
+    case "steak_house":
+      return "meat";
 
     case "hamburger_restaurant":
       return "burger";
