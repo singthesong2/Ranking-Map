@@ -47,6 +47,7 @@ export async function POST(request: Request) {
       "american_restaurant",
       "european_restaurant",
     ],
+    burger: ["hamburger_restaurant", "fast_food_restaurant"],
     southeastAsian: [
       "thai_restaurant",
       "vietnamese_restaurant",

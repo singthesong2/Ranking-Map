@@ -20,6 +20,7 @@ const categories: {
   { label: "샤브샤브", value: "shabu" },
   { label: "마라탕", value: "mala" },
   { label: "치킨", value: "chicken" },
+  { label: "버거", value: "burger" },
   { label: "커리", value: "curry" },
   { label: "동남아", value: "southeastAsian" },
   { label: "카페", value: "cafe" },

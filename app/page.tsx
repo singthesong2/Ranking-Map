@@ -17,6 +17,7 @@ function Home() {
     useState<RestaurantCategory>("all");
   const [radius, setRadius] = useState(1000);
   const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
+  const [visibleCount, setVisibleCount] = useState(10);
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
   const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
@@ -33,7 +34,7 @@ function Home() {
     fetchRestaurants,
   ]);
 
-  const displayRestaurants = useMemo(() => {
+  const sortedRestaurants = useMemo(() => {
     if (latitude === null || longitude === null) return [];
 
     const radiusRestaurants = restaurants.filter((restaurant) => {
@@ -47,18 +48,18 @@ function Home() {
       return distance <= radius;
     });
 
-    const sortedRestaurants = [...radiusRestaurants];
+    const sorted = [...radiusRestaurants];
 
     if (sortOption === "rating")
-      sortedRestaurants.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
 
     if (sortOption === "reviews")
-      sortedRestaurants.sort(
+      sorted.sort(
         (a, b) => (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
       );
 
     if (sortOption === "distance") {
-      sortedRestaurants.sort((a, b) => {
+      sorted.sort((a, b) => {
         const distanceA = calculateDistance(
           latitude,
           longitude,
@@ -76,9 +77,16 @@ function Home() {
         return distanceA - distanceB;
       });
     }
-
-    return sortedRestaurants.slice(0, 10);
+    return sorted;
   }, [restaurants, radius, sortOption, latitude, longitude]);
+
+  const displayRestaurants = sortedRestaurants.slice(0, visibleCount);
+
+  const hasMore = visibleCount < sortedRestaurants.length;
+
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [selectedCategory, sortOption, radius]);
 
   return (
     <main className="min-h-screen bg-white text-black">
@@ -99,7 +107,13 @@ function Home() {
         loading={loading}
         error={error}
       />
-      <RankingList restaurants={displayRestaurants} />
+      <RankingList
+        restaurants={displayRestaurants}
+        hasMore={hasMore}
+        onLoadMore={() => {
+          setVisibleCount((prev) => prev + 10);
+        }}
+      />
     </main>
   );
 }
