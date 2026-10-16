@@ -45,7 +45,6 @@ export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
   if (
     name.includes("햄버거") ||
     name.includes("버거") ||
-    name.includes("수제버거") ||
     name.includes("burger")
   ) {
     return "burger";
