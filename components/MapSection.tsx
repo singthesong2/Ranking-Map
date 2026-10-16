@@ -2,21 +2,38 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
-import useCurrentlocation from "@/hooks/useCurrentlocation";
-import useRestaurants from "@/hooks/useRestaurants";
-import useDebounce from "@/hooks/useDebounce";
+import type { Restaurant, RestaurantSort } from "@/types/restaurant";
 
-function MapSection() {
+interface MapSectionProps {
+  latitude: number | null;
+  longitude: number | null;
+  radius: number;
+  onRadiusChange: (radius: number) => void;
+  sortOption: RestaurantSort;
+  onSortChange: (sort: RestaurantSort) => void;
+  restaurants: Restaurant[];
+  loading: boolean;
+  error: string | null;
+}
+
+function MapSection({
+  latitude,
+  longitude,
+  radius,
+  onRadiusChange,
+  sortOption,
+  onSortChange,
+  restaurants,
+  loading,
+  error,
+}: MapSectionProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<kakao.maps.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [radius, setRadius] = useState(1000);
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
-  const debouncedRadius = useDebounce(radius, 1000);
-  const { latitude, longitude } = useCurrentlocation();
-  const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const restaurantMarkersRef = useRef<kakao.maps.Marker[]>([]);
+  const hoverMark = useRef<kakao.maps.CustomOverlay | null>(null);
 
   const createCurrentLocationMarker = () => {
     const marker = document.createElement("div");
@@ -31,7 +48,6 @@ function MapSection() {
 
     window.kakao.maps.load(() => {
       const center = new window.kakao.maps.LatLng(37.5665, 126.978);
-
       const options = {
         center,
         level: 3,
@@ -77,9 +93,7 @@ function MapSection() {
 
     const currentPosition = new window.kakao.maps.LatLng(latitude, longitude);
 
-    if (radiusCircleRef.current) {
-      radiusCircleRef.current.setMap(null);
-    }
+    if (radiusCircleRef.current) radiusCircleRef.current.setMap(null);
 
     radiusCircleRef.current = new window.kakao.maps.Circle({
       center: currentPosition,
@@ -94,18 +108,19 @@ function MapSection() {
   }, [latitude, longitude, radius, mapReady]);
 
   useEffect(() => {
-    if (latitude === null || longitude === null) return;
-
-    fetchRestaurants(latitude, longitude, debouncedRadius);
-  }, [latitude, longitude, debouncedRadius, fetchRestaurants]);
-
-  useEffect(() => {
     if (!mapReady) return;
     if (!mapRef.current) return;
+
+    const map = mapRef.current;
 
     restaurantMarkersRef.current.forEach((marker) => {
       marker.setMap(null);
     });
+
+    if (hoverMark.current) {
+      hoverMark.current.setMap(null);
+      hoverMark.current = null;
+    }
 
     const markers = restaurants.map((restaurant) => {
       const position = new window.kakao.maps.LatLng(
@@ -117,6 +132,60 @@ function MapSection() {
         position,
       });
       marker.setMap(mapRef.current);
+
+      window.kakao.maps.event.addListener(marker, "mouseover", () => {
+        if (hoverMark.current) hoverMark.current.setMap(null);
+
+        const infoBox = document.createElement("div");
+
+        infoBox.style.pointerEvents = "none";
+        infoBox.style.backgroundColor = "white";
+        infoBox.style.border = "1px solid #e5e7eb";
+        infoBox.style.borderRadius = "8px";
+        infoBox.style.padding = "8px 12px";
+        infoBox.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+        infoBox.style.whiteSpace = "nowrap";
+
+        const name = document.createElement("div");
+
+        name.textContent = restaurant.displayName.text;
+        name.style.fontSize = "14px";
+        name.style.fontWeight = "700";
+        name.style.color = "#111827";
+
+        const info = document.createElement("div");
+
+        info.textContent = `⭐ ${restaurant.rating ?? "정보 없음"} / 리뷰 ${restaurant.userRatingCount ?? 0}개`;
+        info.style.marginTop = "4px";
+        info.style.fontSize = "12px";
+        info.style.color = "#6b7280";
+        infoBox.appendChild(name);
+        infoBox.appendChild(info);
+
+        hoverMark.current = new window.kakao.maps.CustomOverlay({
+          position,
+          content: infoBox,
+          xAnchor: 0.5,
+          yAnchor: 1.7,
+          zIndex: 20,
+        });
+
+        hoverMark.current.setMap(map);
+      });
+
+      window.kakao.maps.event.addListener(marker, "mouseout", () => {
+        if (hoverMark.current) {
+          hoverMark.current.setMap(null);
+          hoverMark.current = null;
+        }
+      });
+
+      window.kakao.maps.event.addListener(marker, "click", () => {
+        if (!restaurant.googleMapsUri) return;
+
+        window.open(restaurant.googleMapsUri, "_blank", "noopener,noreferrer");
+      });
+
       return marker;
     });
 
@@ -131,16 +200,53 @@ function MapSection() {
         onLoad={handleLoad}
       />
       <div ref={mapContainerRef} className="h-96 w-full" />
-
       <div className="p-4">
         <div className="mb-2 flex justify-between">
           <span className="font-medium">검색 반경</span>
-
           <span className="font-bold">
             {radius >= 1000 ? `${(radius / 1000).toFixed(1)}km` : `${radius}m`}
           </span>
         </div>
-
+        <button
+          onClick={() => onSortChange("recommended")}
+          className={
+            sortOption === "recommended"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          추천순
+        </button>
+        <button
+          onClick={() => onSortChange("rating")}
+          className={
+            sortOption === "rating"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          평점순
+        </button>
+        <button
+          onClick={() => onSortChange("reviews")}
+          className={
+            sortOption === "reviews"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          리뷰 많은 순
+        </button>
+        <button
+          onClick={() => onSortChange("distance")}
+          className={
+            sortOption === "distance"
+              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
+              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
+          }
+        >
+          가까운 순
+        </button>
         <input
           type="range"
           min={100}
@@ -148,30 +254,15 @@ function MapSection() {
           step={100}
           value={radius}
           onChange={(e) => {
-            setRadius(Number(e.target.value));
+            onRadiusChange(Number(e.target.value));
           }}
           className="w-full accent-blue-600"
         />
-
         <div className="mt-1 flex justify-between text-sm text-gray-500">
           <span>100m</span>
           <span>5km</span>
         </div>
       </div>
-
-      {loading && <p>맛집을 불러오는 중...</p>}
-
-      {error && <p>{error}</p>}
-      <ul>
-        {restaurants.map((restaurant) => (
-          <li key={restaurant.id}>
-            {restaurant.displayName.text}
-            {" / "}⭐ {restaurant.rating ?? "정보 없음"}
-            {" / "}
-            리뷰 {restaurant.userRatingCount ?? 0}개
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }
