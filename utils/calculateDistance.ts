@@ -18,3 +18,11 @@ export function calculateDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return earthRadius * c;
 }
+
+export function calculateWalkingMinutes(distance: number) {
+  const walkingSpeed = 75;
+  const detourFactor = 1.25;
+  const estimatedDistance = distance * detourFactor;
+
+  return Math.ceil(estimatedDistance / walkingSpeed);
+}
