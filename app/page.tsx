@@ -11,41 +11,61 @@ import useRestaurants from "@/hooks/useRestaurants";
 import useDebounce from "@/hooks/useDebounce";
 import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
+import { classifyRestaurant } from "@/utils/restaurantClassifier";
 
 function Home() {
   const [selectedCategory, setSelectedCategory] =
     useState<RestaurantCategory>("all");
   const [radius, setRadius] = useState(1000);
   const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
+  const [searchCenter, setSearchCenter] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const handleResetLocation = () => {
+    setSearchCenter(null);
+    setVisibleCount(10);
+  };
   const [visibleCount, setVisibleCount] = useState(10);
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
   const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
+  const centerLatitude = searchCenter?.latitude ?? latitude;
+  const centerLongitude = searchCenter?.longitude ?? longitude;
 
   useEffect(() => {
-    if (latitude === null || longitude === null) return;
+    if (centerLatitude === null || centerLongitude === null) return;
 
-    fetchRestaurants(latitude, longitude, debouncedRadius, selectedCategory);
+    fetchRestaurants(
+      centerLatitude,
+      centerLongitude,
+      debouncedRadius,
+      selectedCategory,
+    );
   }, [
-    latitude,
-    longitude,
+    centerLatitude,
+    centerLongitude,
     debouncedRadius,
     selectedCategory,
     fetchRestaurants,
   ]);
 
   const sortedRestaurants = useMemo(() => {
-    if (latitude === null || longitude === null) return [];
+    if (centerLatitude === null || centerLongitude === null) return [];
 
     const radiusRestaurants = restaurants.filter((restaurant) => {
       const distance = calculateDistance(
-        latitude,
-        longitude,
+        centerLatitude,
+        centerLongitude,
         restaurant.location.latitude,
         restaurant.location.longitude,
       );
 
-      return distance <= radius;
+      return (
+        distance <= radius &&
+        (selectedCategory === "all" ||
+          classifyRestaurant(restaurant) === selectedCategory)
+      );
     });
 
     const sorted = [...radiusRestaurants];
@@ -61,15 +81,15 @@ function Home() {
     if (sortOption === "distance") {
       sorted.sort((a, b) => {
         const distanceA = calculateDistance(
-          latitude,
-          longitude,
+          centerLatitude,
+          centerLongitude,
           a.location.latitude,
           a.location.longitude,
         );
 
         const distanceB = calculateDistance(
-          latitude,
-          longitude,
+          centerLatitude,
+          centerLongitude,
           b.location.latitude,
           b.location.longitude,
         );
@@ -78,7 +98,14 @@ function Home() {
       });
     }
     return sorted;
-  }, [restaurants, radius, sortOption, latitude, longitude]);
+  }, [
+    restaurants,
+    radius,
+    sortOption,
+    centerLatitude,
+    centerLongitude,
+    selectedCategory,
+  ]);
 
   const displayRestaurants = sortedRestaurants.slice(0, visibleCount);
 
@@ -86,7 +113,7 @@ function Home() {
 
   useEffect(() => {
     setVisibleCount(10);
-  }, [selectedCategory, sortOption, radius]);
+  }, [selectedCategory, sortOption, radius, centerLatitude, centerLongitude]);
 
   return (
     <main className="min-h-screen bg-white text-black">
@@ -99,6 +126,12 @@ function Home() {
       <MapSection
         latitude={latitude}
         longitude={longitude}
+        searchLatitude={centerLatitude}
+        searchLongitude={centerLongitude}
+        onSearchCenterChange={(latitude, longitude) => {
+          setSearchCenter({ latitude, longitude });
+        }}
+        onResetLocation={handleResetLocation}
         radius={radius}
         onRadiusChange={setRadius}
         sortOption={sortOption}
@@ -109,8 +142,8 @@ function Home() {
       />
       <RankingList
         restaurants={displayRestaurants}
-        latitude={latitude}
-        longitude={longitude}
+        latitude={centerLatitude}
+        longitude={centerLongitude}
         hasMore={hasMore}
         onLoadMore={() => {
           setVisibleCount((prev) => prev + 10);
