@@ -292,10 +292,23 @@ function MapSection({
     mapReady,
   ]);
 
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    if (searchLatitude === null || searchLongitude === null) return;
+    if (isSelectingLocation) return;
+
+    const searchPosition = new window.kakao.maps.LatLng(
+      searchLatitude,
+      searchLongitude,
+    );
+
+    mapRef.current.setCenter(searchPosition);
+  }, [searchLatitude, searchLongitude, mapReady, isSelectingLocation]);
+
   return (
     <section>
       <Script
-        src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false`}
+        src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
         strategy="afterInteractive"
         onLoad={handleLoad}
       />

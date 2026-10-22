@@ -118,7 +118,12 @@ function Home() {
   return (
     <main className="min-h-screen bg-white text-black">
       <Header />
-      <SearchBox />
+      <SearchBox
+        onRegionSelect={(latitude, longitude) => {
+          setSearchCenter({ latitude, longitude });
+          setVisibleCount(10);
+        }}
+      />
       <CategoryFilter
         selectedCategory={selectedCategory}
         onChangeCategory={setSelectedCategory}
