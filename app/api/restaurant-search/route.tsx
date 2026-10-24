@@ -55,6 +55,8 @@ export async function POST(request: Request) {
             "places.types",
             "places.primaryType",
             "places.googleMapsUri",
+            "places.rating",
+            "places.userRatingCount",
             "nextPageToken",
           ].join(","),
         },

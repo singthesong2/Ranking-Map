@@ -2,11 +2,9 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
-import {
-  calculateDistance,
-  calculateWalkingMinutes,
-} from "@/utils/calculateDistance";
 import type { Restaurant, RestaurantSort } from "@/types/restaurant";
+import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
+import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
 
 interface MapSectionProps {
   latitude: number | null;
@@ -20,6 +18,8 @@ interface MapSectionProps {
   sortOption: RestaurantSort;
   onSortChange: (sort: RestaurantSort) => void;
   restaurants: Restaurant[];
+  selectedRestaurant: Restaurant | null;
+  onReturnToSearchLocation: () => void;
   loading: boolean;
   error: string | null;
 }
@@ -36,6 +36,8 @@ function MapSection({
   sortOption,
   onSortChange,
   restaurants,
+  selectedRestaurant,
+  onReturnToSearchLocation,
   loading,
   error,
 }: MapSectionProps) {
@@ -44,10 +46,25 @@ function MapSection({
   const [mapReady, setMapReady] = useState(false);
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
-  const restaurantMarkersRef = useRef<kakao.maps.Marker[]>([]);
-  const hoverMark = useRef<kakao.maps.CustomOverlay | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const searchPinRef = useRef<kakao.maps.Marker | null>(null);
+
+  useRestaurantMarkers({
+    mapReady,
+    mapRef,
+    restaurants,
+    searchLatitude,
+    searchLongitude,
+  });
+
+  useSelectedRestaurantMarker({
+    mapReady,
+    mapRef,
+    mapContainerRef,
+    selectedRestaurant,
+    searchLatitude,
+    searchLongitude,
+  });
 
   const isCustomSearch =
     latitude !== null &&
@@ -113,6 +130,18 @@ function MapSection({
     onResetLocation();
   };
 
+  const handleReturnToSearchLocation = () => {
+    if (!mapRef.current) return;
+    if (searchLatitude === null || searchLongitude === null) return;
+
+    const position = new window.kakao.maps.LatLng(
+      searchLatitude,
+      searchLongitude,
+    );
+    mapRef.current.panTo(position);
+    onReturnToSearchLocation();
+  };
+
   useEffect(() => {
     if (!mapReady) return;
     if (!mapRef.current) return;
@@ -162,101 +191,6 @@ function MapSection({
 
     radiusCircleRef.current.setMap(mapRef.current);
   }, [searchLatitude, searchLongitude, radius, mapReady]);
-
-  useEffect(() => {
-    if (!mapReady) return;
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-
-    restaurantMarkersRef.current.forEach((marker) => {
-      marker.setMap(null);
-    });
-
-    if (hoverMark.current) {
-      hoverMark.current.setMap(null);
-      hoverMark.current = null;
-    }
-
-    const markers = restaurants.map((restaurant) => {
-      const position = new window.kakao.maps.LatLng(
-        restaurant.location.latitude,
-        restaurant.location.longitude,
-      );
-
-      const marker = new window.kakao.maps.Marker({
-        position,
-      });
-      marker.setMap(mapRef.current);
-
-      window.kakao.maps.event.addListener(marker, "mouseover", () => {
-        if (hoverMark.current) hoverMark.current.setMap(null);
-
-        const infoBox = document.createElement("div");
-
-        infoBox.style.pointerEvents = "none";
-        infoBox.style.backgroundColor = "white";
-        infoBox.style.border = "1px solid #e5e7eb";
-        infoBox.style.borderRadius = "8px";
-        infoBox.style.padding = "8px 12px";
-        infoBox.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
-        infoBox.style.whiteSpace = "nowrap";
-
-        const name = document.createElement("div");
-
-        name.textContent = restaurant.displayName.text;
-        name.style.fontSize = "14px";
-        name.style.fontWeight = "700";
-        name.style.color = "#111827";
-
-        const info = document.createElement("div");
-
-        const distance =
-          searchLatitude !== null && searchLongitude !== null
-            ? calculateDistance(
-                searchLatitude,
-                searchLongitude,
-                restaurant.location.latitude,
-                restaurant.location.longitude,
-              )
-            : null;
-
-        info.textContent = `⭐ ${restaurant.rating ?? "정보 없음"} / 리뷰 : ${restaurant.userRatingCount ?? 0}개 / 도보 : ${distance !== null ? `약 ${calculateWalkingMinutes(distance)}분` : "정보 없음"}`;
-        info.style.marginTop = "4px";
-        info.style.fontSize = "12px";
-        info.style.color = "#6b7280";
-        infoBox.appendChild(name);
-        infoBox.appendChild(info);
-
-        hoverMark.current = new window.kakao.maps.CustomOverlay({
-          position,
-          content: infoBox,
-          xAnchor: 0.5,
-          yAnchor: 1.7,
-          zIndex: 100,
-        });
-
-        hoverMark.current.setMap(map);
-      });
-
-      window.kakao.maps.event.addListener(marker, "mouseout", () => {
-        if (hoverMark.current) {
-          hoverMark.current.setMap(null);
-          hoverMark.current = null;
-        }
-      });
-
-      window.kakao.maps.event.addListener(marker, "click", () => {
-        if (!restaurant.googleMapsUri) return;
-
-        window.open(restaurant.googleMapsUri, "_blank", "noopener,noreferrer");
-      });
-
-      return marker;
-    });
-
-    restaurantMarkersRef.current = markers;
-  }, [restaurants, mapReady]);
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
@@ -352,7 +286,7 @@ function MapSection({
                   onClick={handleStartSelecting}
                   className="whitespace-nowrap rounded-full bg-white px-5 py-3 font-semibold text-gray-800 shadow-lg hover:bg-gray-100"
                 >
-                  📍 검색 위치 지정
+                  검색 위치 지정
                 </button>
 
                 {isCustomSearch && (
@@ -363,6 +297,15 @@ function MapSection({
                     className="whitespace-nowrap rounded-full bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50"
                   >
                     내 위치로
+                  </button>
+                )}
+                {selectedRestaurant && !isSelectingLocation && (
+                  <button
+                    type="button"
+                    onClick={handleReturnToSearchLocation}
+                    className="whitespace-nowrap rounded-full bg-green-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-green-700"
+                  >
+                    검색 위치로 돌아가기
                   </button>
                 )}
               </>
