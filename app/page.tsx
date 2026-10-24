@@ -119,6 +119,9 @@ function Home() {
     <main className="min-h-screen bg-white text-black">
       <Header />
       <SearchBox
+        latitude={centerLatitude}
+        longitude={centerLongitude}
+        radius={radius}
         onRegionSelect={(latitude, longitude) => {
           setSearchCenter({ latitude, longitude });
           setVisibleCount(10);

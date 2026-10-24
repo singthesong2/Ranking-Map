@@ -2,6 +2,10 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
+import {
+  calculateDistance,
+  calculateWalkingMinutes,
+} from "@/utils/calculateDistance";
 import type { Restaurant, RestaurantSort } from "@/types/restaurant";
 
 interface MapSectionProps {
@@ -207,7 +211,17 @@ function MapSection({
 
         const info = document.createElement("div");
 
-        info.textContent = `⭐ ${restaurant.rating ?? "정보 없음"} / 리뷰 ${restaurant.userRatingCount ?? 0}개`;
+        const distance =
+          searchLatitude !== null && searchLongitude !== null
+            ? calculateDistance(
+                searchLatitude,
+                searchLongitude,
+                restaurant.location.latitude,
+                restaurant.location.longitude,
+              )
+            : null;
+
+        info.textContent = `⭐ ${restaurant.rating ?? "정보 없음"} / 리뷰 : ${restaurant.userRatingCount ?? 0}개 / 도보 : ${distance !== null ? `약 ${calculateWalkingMinutes(distance)}분` : "정보 없음"}`;
         info.style.marginTop = "4px";
         info.style.fontSize = "12px";
         info.style.color = "#6b7280";
@@ -329,7 +343,6 @@ function MapSection({
           </div>
         )}
 
-        {/* 지도 조작 버튼 */}
         {mapReady && (
           <div className="absolute bottom-4 left-1/2 z-30 flex max-w-[95%] -translate-x-1/2 flex-wrap justify-center gap-2">
             {!isSelectingLocation ? (
