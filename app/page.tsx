@@ -9,7 +9,11 @@ import RankingList from "@/components/RankingList";
 import useCurrentlocation from "@/hooks/useCurrentlocation";
 import useRestaurants from "@/hooks/useRestaurants";
 import useDebounce from "@/hooks/useDebounce";
-import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
+import type {
+  RestaurantCategory,
+  RestaurantSort,
+  Restaurant,
+} from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { classifyRestaurant } from "@/utils/restaurantClassifier";
 
@@ -26,6 +30,8 @@ function Home() {
     setSearchCenter(null);
     setVisibleCount(10);
   };
+  const [selectedRestaurant, setSelectedRestaurant] =
+    useState<Restaurant | null>(null);
   const [visibleCount, setVisibleCount] = useState(10);
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
@@ -126,6 +132,9 @@ function Home() {
           setSearchCenter({ latitude, longitude });
           setVisibleCount(10);
         }}
+        onRestaurantMapSelect={(restaurant) => {
+          setSelectedRestaurant(restaurant ? { ...restaurant } : null);
+        }}
       />
       <CategoryFilter
         selectedCategory={selectedCategory}
@@ -145,6 +154,8 @@ function Home() {
         sortOption={sortOption}
         onSortChange={setSortOption}
         restaurants={displayRestaurants}
+        selectedRestaurant={selectedRestaurant}
+        onReturnToSearchLocation={() => setSelectedRestaurant(null)}
         loading={loading}
         error={error}
       />

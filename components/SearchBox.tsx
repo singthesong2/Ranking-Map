@@ -23,6 +23,7 @@ interface SearchBoxProps {
   longitude: number | null;
   radius: number;
   onRegionSelect: (latitude: number, longitude: number) => void;
+  onRestaurantMapSelect: (restaurant: Restaurant | null) => void;
 }
 
 function searchRegions(query: string): Promise<RegionResult[]> {
@@ -86,6 +87,7 @@ function SearchBox({
   longitude,
   radius,
   onRegionSelect,
+  onRestaurantMapSelect,
 }: SearchBoxProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>("region");
   const [keyword, setKeyword] = useState("");
@@ -125,6 +127,7 @@ function SearchBox({
     setLoadingMore(false);
     setLoadMoreError("");
     restaurantSearchParamsRef.current = null;
+    onRestaurantMapSelect(null);
   };
 
   const handleKeywordChange = (value: string) => {
@@ -140,6 +143,9 @@ function SearchBox({
     setLoadingMore(false);
     setLoadMoreError("");
     restaurantSearchParamsRef.current = null;
+    if (searchMode === "restaurant") {
+      onRestaurantMapSelect(null);
+    }
   };
 
   useEffect(() => {
@@ -187,7 +193,7 @@ function SearchBox({
     setResultsQuery("");
     setSearchError("");
     setSearching(false);
-
+    onRestaurantMapSelect(null);
     onRegionSelect(region.latitude, region.longitude);
   };
 
@@ -523,28 +529,39 @@ function SearchBox({
                         </p>
                       )}
                       {nearbyRestaurants.map(({ restaurant, distance }) => (
-                        <a
+                        <div
                           key={restaurant.id}
-                          href={restaurant.googleMapsUri}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
+                          className="overflow-hidden rounded-lg border border-gray-200"
                         >
-                          <p className="font-semibold">
-                            {restaurant.displayName.text}
-                          </p>
+                          <a
+                            href={restaurant.googleMapsUri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block p-3 transition-colors hover:bg-gray-50"
+                          >
+                            <p className="font-semibold">
+                              {restaurant.displayName.text}
+                            </p>
 
-                          <p className="mt-1 text-sm text-gray-500">
-                            {restaurant.formattedAddress}
-                          </p>
+                            <p className="mt-1 text-sm text-gray-500">
+                              {restaurant.formattedAddress}
+                            </p>
 
-                          <p className="mt-1 text-sm text-blue-600">
-                            거리: {Math.round(distance)}m
-                          </p>
-                          <p className="mt-1 text-sm text-blue-600">
-                            도보 약 {calculateWalkingMinutes(distance)}분
-                          </p>
-                        </a>
+                            <p className="mt-1 text-sm text-blue-600">
+                              거리: {Math.round(distance)}m
+                            </p>
+                            <p className="mt-1 text-sm text-blue-600">
+                              도보 약 {calculateWalkingMinutes(distance)}분
+                            </p>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => onRestaurantMapSelect(restaurant)}
+                            className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                          >
+                            지도에서 보기
+                          </button>
+                        </div>
                       ))}
                       {outsideRestaurants.length > 0 && (
                         <>
@@ -553,23 +570,36 @@ function SearchBox({
                           </h4>
                           {outsideRestaurants.map(
                             ({ restaurant, distance }) => (
-                              <a
+                              <div
                                 key={restaurant.id}
-                                href={restaurant.googleMapsUri}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
+                                className="overflow-hidden rounded-lg border border-gray-200"
                               >
-                                <p className="font-semibold">
-                                  {restaurant.displayName.text}
-                                </p>
-                                <p className="mt-1 text-sm text-gray-500">
-                                  {restaurant.formattedAddress}
-                                </p>
-                                <p className="mt-1 text-sm text-gray-500">
-                                  거리: {(distance / 1000).toFixed(1)}km
-                                </p>
-                              </a>
+                                <a
+                                  href={restaurant.googleMapsUri}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block p-3 transition-colors hover:bg-gray-50"
+                                >
+                                  <p className="font-semibold">
+                                    {restaurant.displayName.text}
+                                  </p>
+                                  <p className="mt-1 text-sm text-gray-500">
+                                    {restaurant.formattedAddress}
+                                  </p>
+                                  <p className="mt-1 text-sm text-gray-500">
+                                    거리: {(distance / 1000).toFixed(1)}km
+                                  </p>
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onRestaurantMapSelect(restaurant)
+                                  }
+                                  className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                                >
+                                  지도에서 보기
+                                </button>
+                              </div>
                             ),
                           )}
                         </>
