@@ -33,6 +33,7 @@ function Home() {
   };
   const [selectedRestaurant, setSelectedRestaurant] =
     useState<Restaurant | null>(null);
+  const [restaurantResultsOpen, setRestaurantResultsOpen] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
@@ -129,12 +130,15 @@ function Home() {
         latitude={centerLatitude}
         longitude={centerLongitude}
         radius={radius}
+        restaurantResultsOpen={restaurantResultsOpen}
+        onRestaurantResultsOpenChange={setRestaurantResultsOpen}
         onRegionSelect={(latitude, longitude) => {
           setSearchCenter({ latitude, longitude });
           setVisibleCount(10);
         }}
         onRestaurantMapSelect={(restaurant) => {
           setSelectedRestaurant(restaurant ? { ...restaurant } : null);
+          setRestaurantResultsOpen(restaurant === null);
         }}
       />
       <CategoryFilter
@@ -156,7 +160,10 @@ function Home() {
         onSortChange={setSortOption}
         restaurants={displayRestaurants}
         selectedRestaurant={selectedRestaurant}
-        onReturnToSearchLocation={() => setSelectedRestaurant(null)}
+        onReturnToSearchLocation={() => {
+          setSelectedRestaurant(null);
+          setRestaurantResultsOpen(true);
+        }}
         loading={loading}
         error={error}
       />
