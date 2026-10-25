@@ -24,6 +24,8 @@ interface SearchBoxProps {
   radius: number;
   onRegionSelect: (latitude: number, longitude: number) => void;
   onRestaurantMapSelect: (restaurant: Restaurant | null) => void;
+  restaurantResultsOpen: boolean;
+  onRestaurantResultsOpenChange: (open: boolean) => void;
 }
 
 function searchRegions(query: string): Promise<RegionResult[]> {
@@ -88,6 +90,8 @@ function SearchBox({
   radius,
   onRegionSelect,
   onRestaurantMapSelect,
+  restaurantResultsOpen,
+  onRestaurantResultsOpenChange,
 }: SearchBoxProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>("region");
   const [keyword, setKeyword] = useState("");
@@ -115,7 +119,6 @@ function SearchBox({
   const handleModeChange = (mode: SearchMode) => {
     requestIdRef.current++;
     submittedKeywordRef.current = "";
-
     setSearchMode(mode);
     setKeyword("");
     setPreviewKeyword("");
@@ -133,7 +136,6 @@ function SearchBox({
   const handleKeywordChange = (value: string) => {
     requestIdRef.current++;
     submittedKeywordRef.current = "";
-
     setKeyword(value);
     setRegionResults([]);
     setResultsQuery("");
@@ -146,6 +148,24 @@ function SearchBox({
     if (searchMode === "restaurant") {
       onRestaurantMapSelect(null);
     }
+    setPreviewKeyword("");
+    setRestaurantResults([]);
+  };
+
+  const handleClearRestaurantSearch = () => {
+    requestIdRef.current++;
+    submittedKeywordRef.current = "";
+    setKeyword("");
+    setPreviewKeyword("");
+    setRestaurantResults([]);
+    setNextPageToken(null);
+    setSearching(false);
+    setSearchError("");
+    setLoadingMore(false);
+    setLoadMoreError("");
+    restaurantSearchParamsRef.current = null;
+    onRestaurantMapSelect(null);
+    onRestaurantResultsOpenChange(true);
   };
 
   useEffect(() => {
@@ -470,10 +490,10 @@ function SearchBox({
                   onClick={() => handleSelectRegion(region)}
                   className="w-full rounded-lg px-3 py-3 text-left hover:bg-gray-100"
                 >
-                  <p className="text-sm font-medium">📍 {region.name}</p>
+                  <p className="text-sm font-medium">{region.name}</p>
 
                   {region.address !== region.name && (
-                    <p className="ml-6 mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-gray-500">
                       {region.address}
                     </p>
                   )}
@@ -486,7 +506,9 @@ function SearchBox({
 
       {searchMode === "region" && previewKeyword && (
         <div className="mt-3">
-          <h3 className="font-semibold">📍 {previewKeyword}</h3>
+          <h3 className="font-semibold">
+            &quot;{previewKeyword}&quot; 검색 결과
+          </h3>
           <p className="mt-2 text-sm text-gray-500">
             선택한 지역을 기준으로 맛집을 검색합니다.
           </p>
@@ -508,116 +530,145 @@ function SearchBox({
               previewKeyword === keyword.trim() &&
               previewKeyword && (
                 <>
-                  <h3 className="font-semibold">
-                    🔎 {previewKeyword} 검색 결과
-                  </h3>
-
-                  {restaurantResults.length === 0 ? (
-                    <p className="text-sm text-gray-500">
-                      {nextPageToken
-                        ? "현재 검색 결과에 일치하는 음식점이 없습니다. 더보기를 눌러 확인해보세요."
-                        : "검색 결과가 없습니다."}
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      <h4 className="font-semibold">
-                        주변 음식점 ({nearbyRestaurants.length})
-                      </h4>
-                      {nearbyRestaurants.length === 0 && (
-                        <p className="text-sm text-gray-500">
-                          검색 반경 안에 음식점이 없습니다.
-                        </p>
-                      )}
-                      {nearbyRestaurants.map(({ restaurant, distance }) => (
-                        <div
-                          key={restaurant.id}
-                          className="overflow-hidden rounded-lg border border-gray-200"
-                        >
-                          <a
-                            href={restaurant.googleMapsUri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block p-3 transition-colors hover:bg-gray-50"
-                          >
-                            <p className="font-semibold">
-                              {restaurant.displayName.text}
-                            </p>
-
-                            <p className="mt-1 text-sm text-gray-500">
-                              {restaurant.formattedAddress}
-                            </p>
-
-                            <p className="mt-1 text-sm text-blue-600">
-                              거리: {Math.round(distance)}m
-                            </p>
-                            <p className="mt-1 text-sm text-blue-600">
-                              도보 약 {calculateWalkingMinutes(distance)}분
-                            </p>
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => onRestaurantMapSelect(restaurant)}
-                            className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                          >
-                            지도에서 보기
-                          </button>
-                        </div>
-                      ))}
-                      {outsideRestaurants.length > 0 && (
-                        <>
-                          <h4 className="pt-3 font-semibold">
-                            검색 반경 밖 ({outsideRestaurants.length})
-                          </h4>
-                          {outsideRestaurants.map(
-                            ({ restaurant, distance }) => (
-                              <div
-                                key={restaurant.id}
-                                className="overflow-hidden rounded-lg border border-gray-200"
-                              >
-                                <a
-                                  href={restaurant.googleMapsUri}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block p-3 transition-colors hover:bg-gray-50"
-                                >
-                                  <p className="font-semibold">
-                                    {restaurant.displayName.text}
-                                  </p>
-                                  <p className="mt-1 text-sm text-gray-500">
-                                    {restaurant.formattedAddress}
-                                  </p>
-                                  <p className="mt-1 text-sm text-gray-500">
-                                    거리: {(distance / 1000).toFixed(1)}km
-                                  </p>
-                                </a>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    onRestaurantMapSelect(restaurant)
-                                  }
-                                  className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                                >
-                                  지도에서 보기
-                                </button>
-                              </div>
-                            ),
-                          )}
-                        </>
-                      )}
-                      {nextPageToken && (
-                        <button
-                          type="button"
-                          onClick={() => void handleLoadMore()}
-                          disabled={loadingMore}
-                          className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
-                        >
-                          {loadingMore ? "추가 검색 중..." : "음식점 더보기"}
-                        </button>
-                      )}
-                      {loadMoreError && (
-                        <p className="text-sm text-red-500">{loadMoreError}</p>
-                      )}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold">
+                      &quot;{previewKeyword}&quot; 검색 결과
+                    </h3>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onRestaurantResultsOpenChange(!restaurantResultsOpen)
+                        }
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        {restaurantResultsOpen ? "접기" : "펼치기"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClearRestaurantSearch}
+                        className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        검색 초기화
+                      </button>
                     </div>
+                  </div>
+                  {restaurantResultsOpen && (
+                    <>
+                      {restaurantResults.length === 0 ? (
+                        <p className="text-sm text-gray-500">
+                          {nextPageToken
+                            ? "현재 검색 결과에 일치하는 음식점이 없습니다. 더보기를 눌러 확인해보세요."
+                            : "검색 결과가 없습니다."}
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold">
+                            주변 음식점 ({nearbyRestaurants.length})
+                          </h4>
+                          {nearbyRestaurants.length === 0 && (
+                            <p className="text-sm text-gray-500">
+                              검색 반경 안에 음식점이 없습니다.
+                            </p>
+                          )}
+                          {nearbyRestaurants.map(({ restaurant, distance }) => (
+                            <div
+                              key={restaurant.id}
+                              className="overflow-hidden rounded-lg border border-gray-200"
+                            >
+                              <a
+                                href={restaurant.googleMapsUri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block p-3 transition-colors hover:bg-gray-50"
+                              >
+                                <p className="font-semibold">
+                                  {restaurant.displayName.text}
+                                </p>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                  {restaurant.formattedAddress}
+                                </p>
+
+                                <p className="mt-1 text-sm text-blue-600">
+                                  거리: {Math.round(distance)}m
+                                </p>
+                                <p className="mt-1 text-sm text-blue-600">
+                                  도보 약 {calculateWalkingMinutes(distance)}분
+                                </p>
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  onRestaurantMapSelect(restaurant)
+                                }
+                                className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                              >
+                                지도에서 보기
+                              </button>
+                            </div>
+                          ))}
+                          {outsideRestaurants.length > 0 && (
+                            <>
+                              <h4 className="pt-3 font-semibold">
+                                검색 반경 밖 ({outsideRestaurants.length})
+                              </h4>
+                              {outsideRestaurants.map(
+                                ({ restaurant, distance }) => (
+                                  <div
+                                    key={restaurant.id}
+                                    className="overflow-hidden rounded-lg border border-gray-200"
+                                  >
+                                    <a
+                                      href={restaurant.googleMapsUri}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block p-3 transition-colors hover:bg-gray-50"
+                                    >
+                                      <p className="font-semibold">
+                                        {restaurant.displayName.text}
+                                      </p>
+                                      <p className="mt-1 text-sm text-gray-500">
+                                        {restaurant.formattedAddress}
+                                      </p>
+                                      <p className="mt-1 text-sm text-gray-500">
+                                        거리: {(distance / 1000).toFixed(1)}km
+                                      </p>
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onRestaurantMapSelect(restaurant)
+                                      }
+                                      className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                                    >
+                                      지도에서 보기
+                                    </button>
+                                  </div>
+                                ),
+                              )}
+                            </>
+                          )}
+                          {nextPageToken && (
+                            <button
+                              type="button"
+                              onClick={() => void handleLoadMore()}
+                              disabled={loadingMore}
+                              className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              {loadingMore
+                                ? "추가 검색 중..."
+                                : "음식점 더보기"}
+                            </button>
+                          )}
+                          {loadMoreError && (
+                            <p className="text-sm text-red-500">
+                              {loadMoreError}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}

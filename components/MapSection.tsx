@@ -124,8 +124,7 @@ function MapSection({
     if (latitude === null || longitude === null) return;
 
     const currentPosition = new window.kakao.maps.LatLng(latitude, longitude);
-
-    mapRef.current.setCenter(currentPosition);
+    mapRef.current.panTo(currentPosition);
     setIsSelectingLocation(false);
     onResetLocation();
   };
@@ -243,7 +242,6 @@ function MapSection({
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
     if (searchLatitude === null || searchLongitude === null) return;
-    if (isSelectingLocation) return;
 
     const searchPosition = new window.kakao.maps.LatLng(
       searchLatitude,
@@ -251,7 +249,7 @@ function MapSection({
     );
 
     mapRef.current.setCenter(searchPosition);
-  }, [searchLatitude, searchLongitude, mapReady, isSelectingLocation]);
+  }, [searchLatitude, searchLongitude, mapReady]);
 
   return (
     <section>
@@ -279,6 +277,14 @@ function MapSection({
 
         {mapReady && (
           <div className="absolute bottom-4 left-1/2 z-30 flex max-w-[95%] -translate-x-1/2 flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={handleReturnCurrentLocation}
+              disabled={latitude === null || longitude === null}
+              className="whitespace-nowrap rounded-full bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              내 위치로
+            </button>
             {!isSelectingLocation ? (
               <>
                 <button
@@ -288,17 +294,6 @@ function MapSection({
                 >
                   검색 위치 지정
                 </button>
-
-                {isCustomSearch && (
-                  <button
-                    type="button"
-                    onClick={handleReturnCurrentLocation}
-                    disabled={latitude === null || longitude === null}
-                    className="whitespace-nowrap rounded-full bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    내 위치로
-                  </button>
-                )}
                 {selectedRestaurant && !isSelectingLocation && (
                   <button
                     type="button"
