@@ -28,6 +28,7 @@ function Home() {
   } | null>(null);
   const handleResetLocation = () => {
     setSearchCenter(null);
+    setSelectedRestaurant(null);
     setVisibleCount(10);
   };
   const [selectedRestaurant, setSelectedRestaurant] =
