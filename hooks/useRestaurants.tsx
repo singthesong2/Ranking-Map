@@ -11,7 +11,8 @@ function useRestaurants() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lastCategoryRef = useRef<RestaurantCategory | null>(null);
+  const lastSearchKeyRef = useRef<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const fetchRestaurants = useCallback(
     async (
@@ -20,6 +21,12 @@ function useRestaurants() {
       radius: number,
       category: RestaurantCategory,
     ) => {
+      const searchKey = `${category}:${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
+      const requestId = ++requestIdRef.current;
+      if (lastSearchKeyRef.current !== searchKey) {
+        lastSearchKeyRef.current = searchKey;
+        setRestaurants([]);
+      }
       try {
         setLoading(true);
         setError(null);
@@ -40,13 +47,13 @@ function useRestaurants() {
         if (!response.ok) throw new Error();
 
         const data: RestaurantsResponse = await response.json();
-        const newRestaurants = data.places ?? [];
-
-        if (lastCategoryRef.current !== category) {
-          setRestaurants(newRestaurants);
-          lastCategoryRef.current = category;
+        if (
+          requestId !== requestIdRef.current ||
+          lastSearchKeyRef.current !== searchKey
+        ) {
           return;
         }
+        const newRestaurants = data.places ?? [];
 
         setRestaurants((prevRestaurants) => {
           const restaurantMap = new Map<string, Restaurant>();
@@ -62,9 +69,10 @@ function useRestaurants() {
           return Array.from(restaurantMap.values());
         });
       } catch {
-        setError("맛집 정보를 불러오지 못했습니다.");
+        if (requestId === requestIdRef.current)
+          setError("맛집 정보를 불러오지 못했습니다.");
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       }
     },
     [],
