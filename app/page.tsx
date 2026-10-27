@@ -9,29 +9,27 @@ import RankingList from "@/components/RankingList";
 import useCurrentlocation from "@/hooks/useCurrentlocation";
 import useRestaurants from "@/hooks/useRestaurants";
 import useDebounce from "@/hooks/useDebounce";
-import type {
-  RestaurantCategory,
-  RestaurantSort,
-  Restaurant,
-} from "@/types/restaurant";
+import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { classifyRestaurant } from "@/utils/restaurantClassifier";
+import { useMapStore } from "@/stores/useMapStore";
 
 function Home() {
   const [selectedCategory, setSelectedCategory] =
     useState<RestaurantCategory>("all");
-  const [radius, setRadius] = useState(1000);
   const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
-  const [searchCenter, setSearchCenter] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [selectedRestaurant, setSelectedRestaurant] =
-    useState<Restaurant | null>(null);
-  const [restaurantResultsOpen, setRestaurantResultsOpen] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
+  const radius = useMapStore((state) => state.radius);
+  const setRestaurantResultsOpen = useMapStore(
+    (state) => state.setRestaurantResultsOpen,
+  );
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
+  const searchCenter = useMapStore((state) => state.searchCenter);
+  const setSearchCenter = useMapStore((state) => state.setSearchCenter);
+  const setSelectedRestaurant = useMapStore(
+    (state) => state.setSelectedRestaurant,
+  );
   const centerLatitude = searchCenter?.latitude ?? latitude;
   const centerLongitude = searchCenter?.longitude ?? longitude;
   const { restaurants, loading, error } = useRestaurants({
@@ -43,7 +41,6 @@ function Home() {
 
   const handleResetLocation = () => {
     setSearchCenter(null);
-    setSelectedRestaurant(null);
     setRestaurantResultsOpen(true);
     setVisibleCount(10);
   };
@@ -119,12 +116,6 @@ function Home() {
       <SearchBox
         latitude={centerLatitude}
         longitude={centerLongitude}
-        radius={radius}
-        restaurantResultsOpen={restaurantResultsOpen}
-        onRestaurantResultsOpenChange={setRestaurantResultsOpen}
-        onRegionSelect={(latitude, longitude) => {
-          setSearchCenter({ latitude, longitude });
-        }}
         onRestaurantMapSelect={(restaurant) => {
           setSelectedRestaurant(restaurant ? { ...restaurant } : null);
           setRestaurantResultsOpen(restaurant === null);
@@ -139,17 +130,10 @@ function Home() {
         longitude={longitude}
         searchLatitude={centerLatitude}
         searchLongitude={centerLongitude}
-        onSearchCenterChange={(latitude, longitude) => {
-          setSearchCenter({ latitude, longitude });
-          setSelectedRestaurant(null);
-        }}
         onResetLocation={handleResetLocation}
-        radius={radius}
-        onRadiusChange={setRadius}
         sortOption={sortOption}
         onSortChange={setSortOption}
         restaurants={displayRestaurants}
-        selectedRestaurant={selectedRestaurant}
         onReturnToSearchLocation={() => {
           setSelectedRestaurant(null);
           setRestaurantResultsOpen(true);

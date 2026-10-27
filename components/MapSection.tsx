@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Restaurant, RestaurantSort } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
+import { useMapStore } from "@/stores/useMapStore";
 
 interface MapSectionProps {
   latitude: number | null;
@@ -12,13 +13,9 @@ interface MapSectionProps {
   searchLatitude: number | null;
   searchLongitude: number | null;
   onResetLocation: () => void;
-  onSearchCenterChange: (latitude: number, longitude: number) => void;
-  radius: number;
-  onRadiusChange: (radius: number) => void;
   sortOption: RestaurantSort;
   onSortChange: (sort: RestaurantSort) => void;
   restaurants: Restaurant[];
-  selectedRestaurant: Restaurant | null;
   onReturnToSearchLocation: () => void;
   loading: boolean;
   error: string | null;
@@ -29,14 +26,10 @@ function MapSection({
   longitude,
   searchLatitude,
   searchLongitude,
-  onSearchCenterChange,
   onResetLocation,
-  radius,
-  onRadiusChange,
   sortOption,
   onSortChange,
   restaurants,
-  selectedRestaurant,
   onReturnToSearchLocation,
   loading,
   error,
@@ -48,6 +41,9 @@ function MapSection({
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const searchPinRef = useRef<kakao.maps.Marker | null>(null);
+
+  const selectedRestaurant = useMapStore((state) => state.selectedRestaurant);
+  const setSearchCenter = useMapStore((state) => state.setSearchCenter);
 
   useRestaurantMarkers({
     mapReady,
@@ -65,6 +61,9 @@ function MapSection({
     searchLatitude,
     searchLongitude,
   });
+
+  const radius = useMapStore((state) => state.radius);
+  const setRadius = useMapStore((state) => state.setRadius);
 
   const isCustomSearch =
     latitude !== null &&
@@ -111,7 +110,7 @@ function MapSection({
     const latitude = center.getLat();
     const longitude = center.getLng();
 
-    onSearchCenterChange(latitude, longitude);
+    setSearchCenter({ latitude, longitude });
     setIsSelectingLocation(false);
   };
 
@@ -380,7 +379,7 @@ function MapSection({
           step={100}
           value={radius}
           onChange={(e) => {
-            onRadiusChange(Number(e.target.value));
+            setRadius(Number(e.target.value));
           }}
           className="w-full accent-blue-600"
         />
