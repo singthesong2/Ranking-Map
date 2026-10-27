@@ -7,6 +7,7 @@ import type { Restaurant } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { calculateWalkingMinutes } from "@/utils/calculateDistance";
 import useRestaurantSearch from "@/hooks/useRestaurantSearch";
+import { useMapStore } from "@/stores/useMapStore";
 
 type SearchMode = "region" | "restaurant";
 
@@ -22,11 +23,7 @@ interface RegionResult {
 interface SearchBoxProps {
   latitude: number | null;
   longitude: number | null;
-  radius: number;
-  onRegionSelect: (latitude: number, longitude: number) => void;
   onRestaurantMapSelect: (restaurant: Restaurant | null) => void;
-  restaurantResultsOpen: boolean;
-  onRestaurantResultsOpenChange: (open: boolean) => void;
 }
 
 function searchRegions(query: string): Promise<RegionResult[]> {
@@ -88,11 +85,7 @@ function searchRegions(query: string): Promise<RegionResult[]> {
 function SearchBox({
   latitude,
   longitude,
-  radius,
-  onRegionSelect,
   onRestaurantMapSelect,
-  restaurantResultsOpen,
-  onRestaurantResultsOpenChange,
 }: SearchBoxProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>("region");
   const [keyword, setKeyword] = useState("");
@@ -104,6 +97,14 @@ function SearchBox({
   const [manualRestaurantKeyword, setManualRestaurantKeyword] = useState("");
   const requestIdRef = useRef(0);
   const submittedKeywordRef = useRef("");
+
+  const radius = useMapStore((state) => state.radius);
+  const restaurantResultsOpen = useMapStore(
+    (state) => state.restaurantResultsOpen,
+  );
+  const setRestaurantResultsOpen = useMapStore(
+    (state) => state.setRestaurantResultsOpen,
+  );
 
   const debouncedKeyword = useDebounce(keyword, 700);
   const debouncedRadius = useDebounce(radius, 1000);
@@ -141,6 +142,8 @@ function SearchBox({
   const loadMoreError = isFetchNextPageError ? "추가 검색에 실패했습니다." : "";
   const resultKeyword =
     searchMode === "region" ? previewKeyword : restaurantSearchKeyword;
+
+  const setSearchCenter = useMapStore((state) => state.setSearchCenter);
 
   const handleModeChange = (mode: SearchMode) => {
     requestIdRef.current++;
@@ -188,7 +191,7 @@ function SearchBox({
     setSearching(false);
     setSearchError("");
     onRestaurantMapSelect(null);
-    onRestaurantResultsOpenChange(true);
+    setRestaurantResultsOpen(true);
   };
 
   useEffect(() => {
@@ -236,8 +239,11 @@ function SearchBox({
     setResultsQuery("");
     setSearchError("");
     setSearching(false);
-    onRestaurantMapSelect(null);
-    onRegionSelect(region.latitude, region.longitude);
+    setSearchCenter({
+      latitude: region.latitude,
+      longitude: region.longitude,
+    });
+    setRestaurantResultsOpen(true);
   };
 
   const handleSearch = async () => {
@@ -416,7 +422,7 @@ function SearchBox({
                 <button
                   type="button"
                   onClick={() =>
-                    onRestaurantResultsOpenChange(!restaurantResultsOpen)
+                    setRestaurantResultsOpen(!restaurantResultsOpen)
                   }
                   className="h-10 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 hover:bg-gray-50"
                 >
