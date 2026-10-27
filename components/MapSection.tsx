@@ -82,7 +82,7 @@ function MapSection({
   };
 
   const handleLoad = () => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || mapRef.current) return;
 
     window.kakao.maps.load(() => {
       const center = new window.kakao.maps.LatLng(37.5665, 126.978);
@@ -256,7 +256,7 @@ function MapSection({
       <Script
         src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
         strategy="afterInteractive"
-        onLoad={handleLoad}
+        onReady={handleLoad}
       />
       <div className="relative">
         <div ref={mapContainerRef} className="h-96 w-full" />

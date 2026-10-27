@@ -9,12 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.105.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@tanstack/react-query-devtools": "^5.105.0",
     "@types/kakaomaps": "^1.1.7",
     "@types/node": "^20",
     "@types/react": "^19",

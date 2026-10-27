@@ -6,6 +6,7 @@ import { normalize, removeRegionSuffix } from "@/utils/regionSearch";
 import type { Restaurant } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { calculateWalkingMinutes } from "@/utils/calculateDistance";
+import useRestaurantSearch from "@/hooks/useRestaurantSearch";
 
 type SearchMode = "region" | "restaurant";
 
@@ -100,21 +101,46 @@ function SearchBox({
   const [resultsQuery, setResultsQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [restaurantResults, setRestaurantResults] = useState<Restaurant[]>([]);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [loadMoreError, setLoadMoreError] = useState("");
-
-  const debouncedKeyword = useDebounce(keyword, 700);
-
+  const [manualRestaurantKeyword, setManualRestaurantKeyword] = useState("");
   const requestIdRef = useRef(0);
   const submittedKeywordRef = useRef("");
-  const restaurantSearchParamsRef = useRef<{
-    keyword: string;
-    latitude: number;
-    longitude: number;
-    radius: number;
-  } | null>(null);
+
+  const debouncedKeyword = useDebounce(keyword, 700);
+  const debouncedRadius = useDebounce(radius, 1000);
+
+  const currentKeyword = keyword.trim();
+  const debouncedSearchKeyword = debouncedKeyword.trim();
+  const autoRestaurantKeyword =
+    currentKeyword.length >= 2 && currentKeyword === debouncedSearchKeyword
+      ? currentKeyword
+      : "";
+  const restaurantSearchKeyword =
+    searchMode !== "restaurant"
+      ? ""
+      : manualRestaurantKeyword !== "" &&
+          manualRestaurantKeyword === currentKeyword
+        ? manualRestaurantKeyword
+        : autoRestaurantKeyword;
+  const {
+    restaurants: restaurantResults,
+    isLoading: restaurantSearching,
+    isError: restaurantIsError,
+    isFetchNextPageError,
+    isFetching,
+    isFetchingNextPage: loadingMore,
+    hasNextPage,
+    fetchNextPage,
+  } = useRestaurantSearch({
+    keyword: restaurantSearchKeyword,
+    latitude,
+    longitude,
+    radius: debouncedRadius,
+    enabled: searchMode === "restaurant",
+  });
+  const restaurantSearchError = restaurantIsError && !isFetchNextPageError;
+  const loadMoreError = isFetchNextPageError ? "추가 검색에 실패했습니다." : "";
+  const resultKeyword =
+    searchMode === "region" ? previewKeyword : restaurantSearchKeyword;
 
   const handleModeChange = (mode: SearchMode) => {
     requestIdRef.current++;
@@ -126,10 +152,7 @@ function SearchBox({
     setResultsQuery("");
     setSearchError("");
     setSearching(false);
-    setNextPageToken(null);
-    setLoadingMore(false);
-    setLoadMoreError("");
-    restaurantSearchParamsRef.current = null;
+    setManualRestaurantKeyword("");
     onRestaurantMapSelect(null);
   };
 
@@ -141,15 +164,10 @@ function SearchBox({
     setResultsQuery("");
     setSearchError("");
     setSearching(false);
-    setNextPageToken(null);
-    setLoadingMore(false);
-    setLoadMoreError("");
-    restaurantSearchParamsRef.current = null;
-    if (searchMode === "restaurant") {
-      onRestaurantMapSelect(null);
-    }
+    setManualRestaurantKeyword("");
     setPreviewKeyword("");
-    setRestaurantResults([]);
+    if (searchMode === "restaurant") onRestaurantMapSelect(null);
+    setPreviewKeyword("");
   };
 
   const handleClearRegionSearch = () => {
@@ -157,9 +175,8 @@ function SearchBox({
     submittedKeywordRef.current = "";
     setKeyword("");
     setPreviewKeyword("");
-    setRegionResults([]);
-    setResultsQuery("");
-    setSearching(false);
+    setManualRestaurantKeyword("");
+    onRestaurantMapSelect(null);
     setSearchError("");
   };
 
@@ -168,13 +185,8 @@ function SearchBox({
     submittedKeywordRef.current = "";
     setKeyword("");
     setPreviewKeyword("");
-    setRestaurantResults([]);
-    setNextPageToken(null);
     setSearching(false);
     setSearchError("");
-    setLoadingMore(false);
-    setLoadMoreError("");
-    restaurantSearchParamsRef.current = null;
     onRestaurantMapSelect(null);
     onRestaurantResultsOpenChange(true);
   };
@@ -228,78 +240,19 @@ function SearchBox({
     onRegionSelect(region.latitude, region.longitude);
   };
 
-  const handleRestaurantSearch = useCallback(
-    async (query: string) => {
-      if (latitude === null || longitude === null) {
-        setSearchError("검색 위치를 확인할 수 없습니다.");
-        return;
-      }
-      const requestId = ++requestIdRef.current;
-      submittedKeywordRef.current = query;
-
-      const params = {
-        keyword: query,
-        latitude,
-        longitude,
-        radius,
-      };
-
-      setSearching(true);
-      setSearchError("");
-      setRestaurantResults([]);
-      setNextPageToken(null);
-      setLoadMoreError("");
-      setLoadingMore(false);
-      restaurantSearchParamsRef.current = null;
-      onRestaurantMapSelect(null);
-      onRestaurantResultsOpenChange(true);
-
-      try {
-        const response = await fetch("/api/restaurant-search", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(params),
-        });
-
-        if (!response.ok) throw new Error("가게 검색 실패");
-
-        const data: {
-          restaurants: Restaurant[];
-          nextPageToken: string | null;
-        } = await response.json();
-
-        if (requestId !== requestIdRef.current) return;
-
-        setRestaurantResults(data.restaurants);
-        setNextPageToken(data.nextPageToken ?? null);
-        setPreviewKeyword(query);
-
-        restaurantSearchParamsRef.current = params;
-      } catch {
-        if (requestId === requestIdRef.current)
-          setSearchError("가게 검색에 실패했습니다.");
-      } finally {
-        if (requestId === requestIdRef.current) setSearching(false);
-      }
-    },
-    [
-      latitude,
-      longitude,
-      radius,
-      onRestaurantMapSelect,
-      onRestaurantResultsOpenChange,
-    ],
-  );
-
   const handleSearch = async () => {
     const query = keyword.trim();
 
     if (!query) return;
 
     if (searchMode === "restaurant") {
-      await handleRestaurantSearch(query);
+      if (latitude === null || longitude === null) {
+        setSearchError("검색 위치를 확인할 수 없습니다.");
+        return;
+      }
+      setSearchError("");
+      setManualRestaurantKeyword(query);
+      onRestaurantMapSelect(null);
       return;
     }
 
@@ -364,18 +317,6 @@ function SearchBox({
     }
   };
 
-  useEffect(() => {
-    if (searchMode !== "restaurant") return;
-
-    const query = debouncedKeyword.trim();
-
-    if (query.length < 2) return;
-    if (query !== keyword.trim()) return;
-    if (query === submittedKeywordRef.current) return;
-
-    void handleRestaurantSearch(query);
-  }, [debouncedKeyword, keyword, searchMode, handleRestaurantSearch]);
-
   const restaurantsWithDistance = restaurantResults
     .map((restaurant) => ({
       restaurant,
@@ -399,54 +340,9 @@ function SearchBox({
     (item) => item.distance > radius,
   );
 
-  const handleLoadMore = async () => {
-    const params = restaurantSearchParamsRef.current;
-
-    if (!nextPageToken || !params || loadingMore || searching) return;
-
-    const requestId = ++requestIdRef.current;
-
-    setLoadingMore(true);
-    setLoadMoreError("");
-
-    try {
-      const response = await fetch("/api/restaurant-search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...params,
-          pageToken: nextPageToken,
-        }),
-      });
-
-      if (!response.ok) throw new Error("추가 검색 실패");
-
-      const data: {
-        restaurants: Restaurant[];
-        nextPageToken: string | null;
-      } = await response.json();
-
-      if (requestId !== requestIdRef.current) return;
-
-      setRestaurantResults((prev) => {
-        const existingIds = new Set(prev.map((item) => item.id));
-
-        const newRestaurants = data.restaurants.filter(
-          (item) => !existingIds.has(item.id),
-        );
-
-        return [...prev, ...newRestaurants];
-      });
-
-      setNextPageToken(data.nextPageToken ?? null);
-    } catch {
-      if (requestId === requestIdRef.current)
-        setLoadMoreError("추가 검색에 실패했습니다.");
-    } finally {
-      if (requestId === requestIdRef.current) setLoadingMore(false);
-    }
+  const handleLoadMore = () => {
+    if (!hasNextPage || isFetching) return;
+    void fetchNextPage();
   };
 
   return (
@@ -478,6 +374,7 @@ function SearchBox({
           음식점 검색
         </button>
       </div>
+
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -504,21 +401,18 @@ function SearchBox({
           검색
         </button>
       </form>
-
-      {keyword.trim() !== "" && (
+      {currentKeyword !== "" && (
         <div className="mt-3 flex min-h-[40px] flex-wrap items-center justify-between gap-2">
-          {/* 검색 결과 제목 */}
-          {previewKeyword !== "" && previewKeyword === keyword.trim() && (
+          {resultKeyword !== "" && resultKeyword === currentKeyword && (
             <h3 className="font-semibold">
-              &quot;{previewKeyword}&quot; 검색 결과
+              &quot;{resultKeyword}&quot; 검색 결과
             </h3>
           )}
           <div className="ml-auto flex items-center gap-2">
             {searchMode === "restaurant" &&
-              !searching &&
-              !searchError &&
-              previewKeyword !== "" &&
-              previewKeyword === keyword.trim() && (
+              restaurantSearchKeyword !== "" &&
+              !restaurantSearching &&
+              !restaurantSearchError && (
                 <button
                   type="button"
                   onClick={() =>
@@ -529,6 +423,7 @@ function SearchBox({
                   {restaurantResultsOpen ? "접기" : "펼치기"}
                 </button>
               )}
+
             <button
               type="button"
               onClick={
@@ -552,12 +447,12 @@ function SearchBox({
           {searchError && (
             <p className="mt-3 text-sm text-red-500">{searchError}</p>
           )}
-          {previewKeyword !== "" && previewKeyword === keyword.trim() && (
+          {previewKeyword !== "" && previewKeyword === currentKeyword && (
             <p className="mt-3 text-sm text-gray-500">
               선택한 지역을 기준으로 맛집을 검색합니다.
             </p>
           )}
-          {resultsQuery === keyword.trim() && regionResults.length > 0 && (
+          {resultsQuery === currentKeyword && regionResults.length > 0 && (
             <div className="mt-3 space-y-1 rounded-xl border border-gray-200 p-2">
               {regionResults.map((region) => (
                 <button
@@ -580,21 +475,26 @@ function SearchBox({
       )}
       {searchMode === "restaurant" && (
         <div className="space-y-3">
-          {searching && (
+          {restaurantSearching && (
             <p className="mt-3 text-sm text-gray-500">음식점 검색 중...</p>
           )}
           {searchError && (
             <p className="mt-3 text-sm text-red-500">{searchError}</p>
           )}
-          {!searching &&
+          {restaurantSearchError && (
+            <p className="mt-3 text-sm text-red-500">
+              음식점 검색에 실패했습니다.
+            </p>
+          )}
+          {!restaurantSearching &&
             !searchError &&
-            previewKeyword !== "" &&
-            previewKeyword === keyword.trim() &&
+            !restaurantSearchError &&
+            restaurantSearchKeyword !== "" &&
             restaurantResultsOpen && (
               <div className="mt-3 space-y-3">
                 {restaurantResults.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    {nextPageToken
+                    {hasNextPage
                       ? "현재 검색 결과에 일치하는 음식점이 없습니다. 더보기를 눌러 확인해보세요."
                       : "검색 결과가 없습니다."}
                   </p>
@@ -668,6 +568,7 @@ function SearchBox({
                                 거리: {(distance / 1000).toFixed(1)}km
                               </p>
                             </a>
+
                             <button
                               type="button"
                               onClick={() => onRestaurantMapSelect(restaurant)}
@@ -681,12 +582,12 @@ function SearchBox({
                     )}
                   </>
                 )}
-                {nextPageToken && (
+                {hasNextPage && (
                   <button
                     type="button"
-                    onClick={() => void handleLoadMore()}
-                    disabled={loadingMore}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore || isFetching}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
                     {loadingMore ? "추가 검색 중..." : "음식점 더보기"}
                   </button>

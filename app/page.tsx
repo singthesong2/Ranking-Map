@@ -26,37 +26,27 @@ function Home() {
     latitude: number;
     longitude: number;
   } | null>(null);
-  const handleResetLocation = () => {
-    setSearchCenter(null);
-    setSelectedRestaurant(null);
-    setVisibleCount(10);
-  };
   const [selectedRestaurant, setSelectedRestaurant] =
     useState<Restaurant | null>(null);
   const [restaurantResultsOpen, setRestaurantResultsOpen] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
-  const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
   const centerLatitude = searchCenter?.latitude ?? latitude;
   const centerLongitude = searchCenter?.longitude ?? longitude;
+  const { restaurants, loading, error } = useRestaurants({
+    latitude: centerLatitude,
+    longitude: centerLongitude,
+    radius: debouncedRadius,
+    category: selectedCategory,
+  });
 
-  useEffect(() => {
-    if (centerLatitude === null || centerLongitude === null) return;
-
-    fetchRestaurants(
-      centerLatitude,
-      centerLongitude,
-      debouncedRadius,
-      selectedCategory,
-    );
-  }, [
-    centerLatitude,
-    centerLongitude,
-    debouncedRadius,
-    selectedCategory,
-    fetchRestaurants,
-  ]);
+  const handleResetLocation = () => {
+    setSearchCenter(null);
+    setSelectedRestaurant(null);
+    setRestaurantResultsOpen(true);
+    setVisibleCount(10);
+  };
 
   const sortedRestaurants = useMemo(() => {
     if (centerLatitude === null || centerLongitude === null) return [];
@@ -134,7 +124,6 @@ function Home() {
         onRestaurantResultsOpenChange={setRestaurantResultsOpen}
         onRegionSelect={(latitude, longitude) => {
           setSearchCenter({ latitude, longitude });
-          setVisibleCount(10);
         }}
         onRestaurantMapSelect={(restaurant) => {
           setSelectedRestaurant(restaurant ? { ...restaurant } : null);
@@ -152,6 +141,7 @@ function Home() {
         searchLongitude={centerLongitude}
         onSearchCenterChange={(latitude, longitude) => {
           setSearchCenter({ latitude, longitude });
+          setSelectedRestaurant(null);
         }}
         onResetLocation={handleResetLocation}
         radius={radius}
