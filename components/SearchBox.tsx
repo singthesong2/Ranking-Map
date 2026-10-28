@@ -8,6 +8,7 @@ import { calculateDistance } from "@/utils/calculateDistance";
 import { calculateWalkingMinutes } from "@/utils/calculateDistance";
 import useRestaurantSearch from "@/hooks/useRestaurantSearch";
 import { useMapStore } from "@/stores/useMapStore";
+import FavoriteButton from "@/components/FavoriteButton";
 
 type SearchMode = "region" | "restaurant";
 
@@ -520,25 +521,30 @@ function SearchBox({
                         key={restaurant.id}
                         className="overflow-hidden rounded-lg border border-gray-200"
                       >
-                        <a
-                          href={restaurant.googleMapsUri}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block p-3 transition-colors hover:bg-gray-50"
-                        >
-                          <p className="font-semibold">
-                            {restaurant.displayName.text}
-                          </p>
-                          <p className="mt-1 text-sm text-gray-500">
-                            {restaurant.formattedAddress}
-                          </p>
-                          <p className="mt-1 text-sm text-blue-600">
-                            거리: {Math.round(distance)}m
-                          </p>
-                          <p className="mt-1 text-sm text-blue-600">
-                            도보 약 {calculateWalkingMinutes(distance)}분
-                          </p>
-                        </a>
+                        <div className="flex items-center gap-3">
+                          <a
+                            href={restaurant.googleMapsUri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
+                          >
+                            <p className="font-semibold">
+                              {restaurant.displayName.text}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-500">
+                              {restaurant.formattedAddress}
+                            </p>
+                            <p className="mt-1 text-sm text-blue-600">
+                              거리: {Math.round(distance)}m
+                            </p>
+                            <p className="mt-1 text-sm text-blue-600">
+                              도보 약 {calculateWalkingMinutes(distance)}분
+                            </p>
+                          </a>
+                          <div className="shrink-0 pr-3">
+                            <FavoriteButton restaurant={restaurant} />
+                          </div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => onRestaurantMapSelect(restaurant)}
@@ -558,23 +564,27 @@ function SearchBox({
                             key={restaurant.id}
                             className="overflow-hidden rounded-lg border border-gray-200"
                           >
-                            <a
-                              href={restaurant.googleMapsUri}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block p-3 transition-colors hover:bg-gray-50"
-                            >
-                              <p className="font-semibold">
-                                {restaurant.displayName.text}
-                              </p>
-                              <p className="mt-1 text-sm text-gray-500">
-                                {restaurant.formattedAddress}
-                              </p>
-                              <p className="mt-1 text-sm text-gray-500">
-                                거리: {(distance / 1000).toFixed(1)}km
-                              </p>
-                            </a>
-
+                            <div className="flex items-center gap-3">
+                              <a
+                                href={restaurant.googleMapsUri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
+                              >
+                                <p className="font-semibold">
+                                  {restaurant.displayName.text}
+                                </p>
+                                <p className="mt-1 text-sm text-gray-500">
+                                  {restaurant.formattedAddress}
+                                </p>
+                                <p className="mt-1 text-sm text-gray-500">
+                                  거리: {(distance / 1000).toFixed(1)}km
+                                </p>
+                              </a>
+                              <div className="shrink-0 pr-3">
+                                <FavoriteButton restaurant={restaurant} />
+                              </div>
+                            </div>
                             <button
                               type="button"
                               onClick={() => onRestaurantMapSelect(restaurant)}
