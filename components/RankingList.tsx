@@ -3,6 +3,7 @@ import {
   calculateDistance,
   calculateWalkingMinutes,
 } from "@/utils/calculateDistance";
+import FavoriteButton from "@/components/FavoriteButton";
 
 interface RankingListProps {
   restaurants: Restaurant[];
@@ -40,7 +41,7 @@ function RankingList({
             href={restaurant.googleMapsUri}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50"
+            className="relative block rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50"
           >
             <div className="flex gap-4">
               <span className="text-xl font-bold">{index + 1}</span>
@@ -52,6 +53,9 @@ function RankingList({
                   {getWalkingMinutes(restaurant) !== null && (
                     <span>도보 약 {getWalkingMinutes(restaurant)}분</span>
                   )}
+                </div>
+                <div className="absolute right-3 top-1/2 z-10 -translate-y-1/2">
+                  <FavoriteButton restaurant={restaurant} />
                 </div>
               </div>
             </div>
