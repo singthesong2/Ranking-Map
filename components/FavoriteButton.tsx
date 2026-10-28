@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { IconHeart, IconHeartFilled } from "@tabler/icons-react";
 import { useFavoritesStore } from "@/stores/useFavoritesStore";
 import type { Restaurant } from "@/types/restaurant";
+import type { MouseEvent } from "react";
+import { useToastStore } from "@/stores/useToastStore";
 
 interface FavoriteButtonProps {
   restaurant: Restaurant;
@@ -21,6 +23,7 @@ export default function FavoriteButton({
   const rememberRestaurant = useFavoritesStore(
     (state) => state.rememberRestaurant,
   );
+  const showToast = useToastStore((state) => state.showToast);
 
   useEffect(() => {
     if (isFavorite) {
@@ -28,22 +31,29 @@ export default function FavoriteButton({
     }
   }, [isFavorite, restaurant, rememberRestaurant]);
 
+  const handleToggleFavorite = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleFavorite(restaurant);
+    showToast(
+      isFavorite
+        ? `${restaurant.displayName.text} 찜을 해제했어요.`
+        : `${restaurant.displayName.text} 찜 목록에 추가했어요.`,
+      isFavorite ? "success" : "favorite",
+    );
+  };
+
   return (
     <button
       type="button"
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleFavorite(restaurant);
-      }}
+      onClick={handleToggleFavorite}
       aria-label={
         isFavorite
           ? `${restaurant.displayName.text} 찜 해제`
           : `${restaurant.displayName.text} 찜 추가`
       }
       aria-pressed={isFavorite}
-      title={isFavorite ? "찜 해제" : "찜 추가"}
-      className={`flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:bg-red-50 ${className}`}
+      className={`flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm ${className}`}
     >
       {isFavorite ? (
         <IconHeartFilled size={22} className="text-red-500" />

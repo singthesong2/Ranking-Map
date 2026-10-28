@@ -1,1 +1,33 @@
 @import "tailwindcss";
+
+@keyframes custom-toast-lifecycle {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  10% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  85% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+.custom-toast-lifecycle {
+  animation: custom-toast-lifecycle 3s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .custom-toast-lifecycle {
+    animation: none;
+  }
+}

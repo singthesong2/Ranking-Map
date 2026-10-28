@@ -11,6 +11,7 @@ import { useFavoritesStore } from "@/stores/useFavoritesStore";
 import { useQueries } from "@tanstack/react-query";
 import type { Restaurant } from "@/types/restaurant";
 import ConfirmModal from "@/components/ConfirmModal";
+import { useToastStore } from "@/stores/useToastStore";
 
 type FavoritePlaceDetails = Pick<
   Restaurant,
@@ -58,9 +59,11 @@ export default function FavoritesPanel({
     })),
   });
 
+  const showToast = useToastStore((state) => state.showToast);
   const handleConfirmClear = () => {
     clearFavorites();
     setIsDeleteModalOpen(false);
+    showToast("찜 목록을 모두 삭제했어요.", "success");
   };
 
   useEffect(() => {
@@ -78,6 +81,16 @@ export default function FavoritesPanel({
   }, [isOpen, isDeleteModalOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const handleRemoveFavorite = (id: string, restaurantName?: string) => {
+    removeFavorite(id);
+    showToast(
+      restaurantName
+        ? `${restaurantName} 찜을 해제했어요.`
+        : "찜을 해제했어요.",
+      "success",
+    );
+  };
 
   return (
     <>
@@ -162,7 +175,9 @@ export default function FavoritesPanel({
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeFavorite(id)}
+                      onClick={() =>
+                        handleRemoveFavorite(id, restaurant?.displayName.text)
+                      }
                       aria-label="찜 해제"
                       className="rounded-full p-2 text-red-500 hover:bg-red-50"
                     >
