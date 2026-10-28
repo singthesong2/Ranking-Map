@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   IconX,
   IconTrash,
@@ -10,6 +10,7 @@ import {
 import { useFavoritesStore } from "@/stores/useFavoritesStore";
 import { useQueries } from "@tanstack/react-query";
 import type { Restaurant } from "@/types/restaurant";
+import ConfirmModal from "@/components/ConfirmModal";
 
 type FavoritePlaceDetails = Pick<
   Restaurant,
@@ -32,7 +33,7 @@ export default function FavoritesPanel({
 
   const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
   const clearFavorites = useFavoritesStore((state) => state.clearFavorites);
-
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const detailQueries = useQueries({
     queries: favoriteIds.map((id) => ({
       queryKey: ["favorite-place-details", id],
@@ -57,25 +58,24 @@ export default function FavoritesPanel({
     })),
   });
 
+  const handleConfirmClear = () => {
+    clearFavorites();
+    setIsDeleteModalOpen(false);
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape") return;
+      if (isDeleteModalOpen) setIsDeleteModalOpen(false);
+      else onClose();
     };
-
     window.addEventListener("keydown", handleKeyDown);
-
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
-
-  const handleClearAll = () => {
-    if (window.confirm("찜 목록을 모두 삭제하시겠습니까?")) {
-      clearFavorites();
-    }
-  };
+  }, [isOpen, isDeleteModalOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -188,7 +188,7 @@ export default function FavoritesPanel({
           <div className="border-t border-gray-200 p-5">
             <button
               type="button"
-              onClick={handleClearAll}
+              onClick={() => setIsDeleteModalOpen(true)}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 py-3 text-red-600 hover:bg-red-50"
             >
               <IconTrash size={18} />
@@ -197,6 +197,14 @@ export default function FavoritesPanel({
           </div>
         )}
       </aside>
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        title="찜 목록을 모두 삭제할까요?"
+        description={`저장한 맛집 ${favoriteIds.length}개가 삭제됩니다.\n삭제한 찜 목록은 복구할 수 없습니다.`}
+        confirmText="전체 삭제"
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmClear}
+      />
     </>
   );
 }
