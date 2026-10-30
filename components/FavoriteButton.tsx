@@ -53,12 +53,19 @@ export default function FavoriteButton({
           : `${restaurant.displayName.text} 찜 추가`
       }
       aria-pressed={isFavorite}
-      className={`flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm ${className}`}
+      className={`group flex h-10 w-10 items-center justify-center bg-transparent transition-transform hover:scale-110 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400 ${className}`}
     >
       {isFavorite ? (
-        <IconHeartFilled size={22} className="text-red-500" />
+        <IconHeartFilled
+          size={22}
+          className="text-red-500 transition-colors group-hover:text-red-300"
+        />
       ) : (
-        <IconHeart size={22} stroke={1.8} />
+        <IconHeart
+          size={22}
+          stroke={1.8}
+          className="text-gray-400 transition-colors group-hover:text-red-300"
+        />
       )}
     </button>
   );
