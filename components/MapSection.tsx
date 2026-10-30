@@ -147,11 +147,7 @@ function MapSection({
 
     const currentPosition = new window.kakao.maps.LatLng(latitude, longitude);
 
-    mapRef.current.setCenter(currentPosition);
-
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-    }
+    if (markerRef.current) markerRef.current.setMap(null);
 
     const marker = createCurrentLocationMarker();
 
@@ -199,7 +195,6 @@ function MapSection({
     }
 
     if (searchLatitude === null || searchLongitude === null) return;
-
     if (searchLatitude === latitude && searchLongitude === longitude) {
       searchPinRef.current?.setMap(null);
       return;
