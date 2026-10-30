@@ -13,6 +13,9 @@ import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { classifyRestaurant } from "@/utils/restaurantClassifier";
 import { useMapStore } from "@/stores/useMapStore";
+import { createShareUrl } from "@/utils/shareSearch";
+import { readShareSearch } from "@/utils/shareSearch";
+import { useToastStore } from "@/stores/useToastStore";
 
 function Home() {
   const [selectedCategory, setSelectedCategory] =
@@ -20,6 +23,7 @@ function Home() {
   const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
   const [visibleCount, setVisibleCount] = useState(10);
   const radius = useMapStore((state) => state.radius);
+  const setRadius = useMapStore((state) => state.setRadius);
   const setRestaurantResultsOpen = useMapStore(
     (state) => state.setRestaurantResultsOpen,
   );
@@ -38,6 +42,8 @@ function Home() {
     radius: debouncedRadius,
     category: selectedCategory,
   });
+
+  const showToast = useToastStore((state) => state.showToast);
 
   const handleResetLocation = () => {
     setSearchCenter(null);
@@ -110,9 +116,55 @@ function Home() {
     setVisibleCount(10);
   }, [selectedCategory, sortOption, radius, centerLatitude, centerLongitude]);
 
+  const handleShareSearch = async () => {
+    if (centerLatitude === null || centerLongitude === null) {
+      showToast("검색 위치 정보를 가져오지 못했어요.", "error");
+      return;
+    }
+
+    const shareUrl = createShareUrl({
+      latitude: centerLatitude,
+      longitude: centerLongitude,
+      radius,
+      category: selectedCategory,
+      sort: sortOption,
+    });
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "맛집 랭킹",
+          text: "내가 검색한 맛집을 확인해 봐!",
+          url: shareUrl,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      showToast("검색 링크를 복사했어요.", "success");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      showToast("링크 공유에 실패했어요.", "error");
+    }
+  };
+
+  useEffect(() => {
+    const shared = readShareSearch();
+
+    if (!shared) return;
+
+    setSearchCenter({
+      latitude: shared.latitude,
+      longitude: shared.longitude,
+    });
+
+    if (shared.radius !== undefined) setRadius(shared.radius);
+    if (shared.category !== undefined) setSelectedCategory(shared.category);
+    if (shared.sort !== undefined) setSortOption(shared.sort);
+  }, [setSearchCenter, setRadius]);
+
   return (
     <main className="min-h-screen bg-white text-black">
-      <Header />
+      <Header onShareSearch={handleShareSearch} />
       <SearchBox
         latitude={centerLatitude}
         longitude={centerLongitude}
