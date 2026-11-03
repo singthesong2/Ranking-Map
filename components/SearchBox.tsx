@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import useDebounce from "@/hooks/useDebounce";
 import { normalize, removeRegionSuffix } from "@/utils/regionSearch";
 import type { Restaurant } from "@/types/restaurant";
@@ -8,7 +9,12 @@ import { calculateDistance } from "@/utils/calculateDistance";
 import { calculateWalkingMinutes } from "@/utils/calculateDistance";
 import useRestaurantSearch from "@/hooks/useRestaurantSearch";
 import { useMapStore } from "@/stores/useMapStore";
+import { useToastStore } from "@/stores/useToastStore";
+import { useSearchHistoryStore } from "@/stores/useSearchHistoryStore";
+import type { SearchHistoryItem } from "@/schemas/searchHistorySchema";
 import FavoriteButton from "@/components/FavoriteButton";
+import SearchHistoryList from "@/components/SearchHistoryList";
+import ConfirmModal from "@/components/ConfirmModal";
 
 type SearchMode = "region" | "restaurant";
 
@@ -96,6 +102,8 @@ function SearchBox({
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [manualRestaurantKeyword, setManualRestaurantKeyword] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [deleteHistoryModalOpen, setDeleteHistoryModalOpen] = useState(false);
   const requestIdRef = useRef(0);
   const submittedKeywordRef = useRef("");
 
@@ -106,6 +114,12 @@ function SearchBox({
   const setRestaurantResultsOpen = useMapStore(
     (state) => state.setRestaurantResultsOpen,
   );
+  const setRadius = useMapStore((state) => state.setRadius);
+  const addHistory = useSearchHistoryStore((state) => state.addHistory);
+  const clearHistoryByMode = useSearchHistoryStore(
+    (state) => state.clearHistoryByMode,
+  );
+  const showToast = useToastStore((state) => state.showToast);
 
   const debouncedKeyword = useDebounce(keyword, 700);
   const debouncedRadius = useDebounce(radius, 1000);
@@ -143,8 +157,29 @@ function SearchBox({
   const loadMoreError = isFetchNextPageError ? "추가 검색에 실패했습니다." : "";
   const resultKeyword =
     searchMode === "region" ? previewKeyword : restaurantSearchKeyword;
-
+  const handleFocusSearch = () => {
+    setShowHistory(true);
+  };
   const setSearchCenter = useMapStore((state) => state.setSearchCenter);
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setShowHistory(false);
+    }
+  };
+  const handleRequestClearHistory = () => {
+    setDeleteHistoryModalOpen(true);
+  };
+  const handleCancelClearHistory = () => {
+    setDeleteHistoryModalOpen(false);
+  };
+  const handleConfirmClearHistory = () => {
+    clearHistoryByMode(searchMode);
+    setDeleteHistoryModalOpen(false);
+    showToast(
+      `${searchMode === "region" ? "지역" : "음식점"} 검색 기록을 모두 삭제했어요.`,
+      "success",
+    );
+  };
 
   const handleModeChange = (mode: SearchMode) => {
     requestIdRef.current++;
@@ -157,6 +192,7 @@ function SearchBox({
     setSearchError("");
     setSearching(false);
     setManualRestaurantKeyword("");
+    setShowHistory(true);
     onRestaurantMapSelect(null);
   };
 
@@ -164,6 +200,7 @@ function SearchBox({
     requestIdRef.current++;
     submittedKeywordRef.current = "";
     setKeyword(value);
+    setShowHistory(value.trim() === "");
     setRegionResults([]);
     setResultsQuery("");
     setSearchError("");
@@ -180,6 +217,7 @@ function SearchBox({
     setKeyword("");
     setPreviewKeyword("");
     setManualRestaurantKeyword("");
+    setShowHistory(true);
     onRestaurantMapSelect(null);
     setSearchError("");
   };
@@ -191,6 +229,7 @@ function SearchBox({
     setPreviewKeyword("");
     setSearching(false);
     setSearchError("");
+    setShowHistory(true);
     onRestaurantMapSelect(null);
     setRestaurantResultsOpen(true);
   };
@@ -240,11 +279,60 @@ function SearchBox({
     setResultsQuery("");
     setSearchError("");
     setSearching(false);
+    setShowHistory(false);
     setSearchCenter({
       latitude: region.latitude,
       longitude: region.longitude,
     });
     setRestaurantResultsOpen(true);
+
+    addHistory({
+      kind: "region",
+      label: region.name,
+      latitude: region.latitude,
+      longitude: region.longitude,
+    });
+  };
+
+  const handleSelectHistory = (item: SearchHistoryItem) => {
+    if (item.kind === "region") {
+      handleSelectRegion({
+        id: item.id,
+        name: item.label,
+        address: item.label,
+        latitude: item.latitude,
+        longitude: item.longitude,
+      });
+
+      return;
+    }
+
+    requestIdRef.current++;
+    submittedKeywordRef.current = "";
+    setSearchMode("restaurant");
+    setKeyword(item.label);
+    setPreviewKeyword("");
+    setRegionResults([]);
+    setResultsQuery("");
+    setSearching(false);
+    setSearchError("");
+    setShowHistory(false);
+    setSearchCenter({
+      latitude: item.latitude,
+      longitude: item.longitude,
+    });
+    setRadius(item.radius);
+    setManualRestaurantKeyword(item.label);
+    setRestaurantResultsOpen(true);
+    onRestaurantMapSelect(null);
+
+    addHistory({
+      kind: "restaurant",
+      label: item.label,
+      latitude: item.latitude,
+      longitude: item.longitude,
+      radius: item.radius,
+    });
   };
 
   const handleSearch = async () => {
@@ -258,8 +346,16 @@ function SearchBox({
         return;
       }
       setSearchError("");
+      setShowHistory(false);
       setManualRestaurantKeyword(query);
       onRestaurantMapSelect(null);
+      addHistory({
+        kind: "restaurant",
+        label: query,
+        latitude,
+        longitude,
+        radius,
+      });
       return;
     }
 
@@ -324,6 +420,12 @@ function SearchBox({
     }
   };
 
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setShowHistory(false);
+    void handleSearch();
+  };
+
   const restaurantsWithDistance = restaurantResults
     .map((restaurant) => ({
       restaurant,
@@ -352,270 +454,291 @@ function SearchBox({
     void fetchNextPage();
   };
 
+  useEffect(() => {
+    void useSearchHistoryStore.persist.rehydrate();
+  }, []);
+
   return (
-    <section className="m-4 rounded-2xl border border-gray-200 p-4">
-      <h2 className="mb-5 text-xl font-semibold">맛집 검색</h2>
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => handleModeChange("region")}
-          aria-pressed={searchMode === "region"}
-          className={`rounded-full px-4 py-2 ${
-            searchMode === "region"
-              ? "bg-gray-100 font-semibold text-gray-900"
-              : "text-gray-400 hover:bg-gray-50"
-          }`}
-        >
-          지역 검색
-        </button>
-        <button
-          type="button"
-          onClick={() => handleModeChange("restaurant")}
-          aria-pressed={searchMode === "restaurant"}
-          className={`rounded-full px-4 py-2 ${
-            searchMode === "restaurant"
-              ? "bg-gray-100 font-semibold text-gray-900"
-              : "text-gray-400 hover:bg-gray-50"
-          }`}
-        >
-          음식점 검색
-        </button>
-      </div>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void handleSearch();
-        }}
-        className="flex gap-2"
-      >
-        <input
-          type="search"
-          value={keyword}
-          onChange={(e) => handleKeywordChange(e.target.value)}
-          placeholder={
-            searchMode === "region"
-              ? "예: 강남역, 홍대입구, 신림동"
-              : "예: 맥도날드, 강강술래, 프랭크버거"
-          }
-          className="min-w-0 flex-1 rounded-full border border-gray-300 px-5 py-3 outline-none focus:border-blue-500"
-        />
-        <button
-          type="submit"
-          disabled={!keyword.trim()}
-          className="rounded-full bg-blue-600 px-5 py-3 text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          검색
-        </button>
-      </form>
-      {currentKeyword !== "" && (
-        <div className="mt-3 flex min-h-[40px] flex-wrap items-center justify-between gap-2">
-          {resultKeyword !== "" && resultKeyword === currentKeyword && (
-            <h3 className="font-semibold">
-              &quot;{resultKeyword}&quot; 검색 결과
-            </h3>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            {searchMode === "restaurant" &&
-              restaurantSearchKeyword !== "" &&
-              !restaurantSearching &&
-              !restaurantSearchError && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setRestaurantResultsOpen(!restaurantResultsOpen)
-                  }
-                  className="h-10 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  {restaurantResultsOpen ? "접기" : "펼치기"}
-                </button>
-              )}
-
-            <button
-              type="button"
-              onClick={
-                searchMode === "region"
-                  ? handleClearRegionSearch
-                  : handleClearRestaurantSearch
-              }
-              className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-600 hover:bg-red-50"
-            >
-              검색 초기화
-            </button>
-          </div>
+    <>
+      <section className="m-4 rounded-2xl border border-gray-200 p-4">
+        <h2 className="mb-5 text-xl font-semibold">맛집 검색</h2>
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => handleModeChange("region")}
+            aria-pressed={searchMode === "region"}
+            className={`rounded-full px-4 py-2 ${
+              searchMode === "region"
+                ? "bg-gray-100 font-semibold text-gray-900"
+                : "text-gray-400 hover:bg-gray-50"
+            }`}
+          >
+            지역 검색
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeChange("restaurant")}
+            aria-pressed={searchMode === "restaurant"}
+            className={`rounded-full px-4 py-2 ${
+              searchMode === "restaurant"
+                ? "bg-gray-100 font-semibold text-gray-900"
+                : "text-gray-400 hover:bg-gray-50"
+            }`}
+          >
+            음식점 검색
+          </button>
         </div>
-      )}
-      {searchMode === "region" && (
-        <div className="space-y-3">
-          {searching && (
-            <p className="mt-3 text-sm text-gray-500">검색 중...</p>
-          )}
 
-          {searchError && (
-            <p className="mt-3 text-sm text-red-500">{searchError}</p>
-          )}
-          {previewKeyword !== "" && previewKeyword === currentKeyword && (
-            <p className="mt-3 text-sm text-gray-500">
-              선택한 지역을 기준으로 맛집을 검색합니다.
-            </p>
-          )}
-          {resultsQuery === currentKeyword && regionResults.length > 0 && (
-            <div className="mt-3 space-y-1 rounded-xl border border-gray-200 p-2">
-              {regionResults.map((region) => (
-                <button
-                  key={region.id}
-                  type="button"
-                  onClick={() => handleSelectRegion(region)}
-                  className="w-full rounded-lg px-3 py-3 text-left hover:bg-gray-100"
-                >
-                  <p className="text-sm font-medium">{region.name}</p>
-                  {region.address !== region.name && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      {region.address}
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      {searchMode === "restaurant" && (
-        <div className="space-y-3">
-          {restaurantSearching && (
-            <p className="mt-3 text-sm text-gray-500">음식점 검색 중...</p>
-          )}
-          {searchError && (
-            <p className="mt-3 text-sm text-red-500">{searchError}</p>
-          )}
-          {restaurantSearchError && (
-            <p className="mt-3 text-sm text-red-500">
-              음식점 검색에 실패했습니다.
-            </p>
-          )}
-          {!restaurantSearching &&
-            !searchError &&
-            !restaurantSearchError &&
-            restaurantSearchKeyword !== "" &&
-            restaurantResultsOpen && (
-              <div className="mt-3 space-y-3">
-                {restaurantResults.length === 0 ? (
-                  <p className="text-sm text-gray-500">
-                    {hasNextPage
-                      ? "현재 검색 결과에 일치하는 음식점이 없습니다. 더보기를 눌러 확인해보세요."
-                      : "검색 결과가 없습니다."}
-                  </p>
-                ) : (
-                  <>
-                    <h4 className="font-semibold">
-                      주변 음식점 ({nearbyRestaurants.length})
-                    </h4>
-
-                    {nearbyRestaurants.length === 0 && (
-                      <p className="text-sm text-gray-500">
-                        검색 반경 안에 음식점이 없습니다.
-                      </p>
-                    )}
-                    {nearbyRestaurants.map(({ restaurant, distance }) => (
-                      <div
-                        key={restaurant.id}
-                        className="overflow-hidden rounded-lg border border-gray-200"
-                      >
-                        <div className="flex items-center gap-3">
-                          <a
-                            href={restaurant.googleMapsUri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
-                          >
-                            <p className="font-semibold">
-                              {restaurant.displayName.text}
-                            </p>
-                            <p className="mt-1 text-sm text-gray-500">
-                              {restaurant.formattedAddress}
-                            </p>
-                            <p className="mt-1 text-sm text-blue-600">
-                              거리: {Math.round(distance)}m
-                            </p>
-                            <p className="mt-1 text-sm text-blue-600">
-                              도보 약 {calculateWalkingMinutes(distance)}분
-                            </p>
-                          </a>
-                          <div className="shrink-0 pr-3">
-                            <FavoriteButton restaurant={restaurant} />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => onRestaurantMapSelect(restaurant)}
-                          className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                        >
-                          지도에서 보기
-                        </button>
-                      </div>
-                    ))}
-                    {outsideRestaurants.length > 0 && (
-                      <>
-                        <h4 className="pt-3 font-semibold">
-                          검색 반경 밖 ({outsideRestaurants.length})
-                        </h4>
-                        {outsideRestaurants.map(({ restaurant, distance }) => (
-                          <div
-                            key={restaurant.id}
-                            className="overflow-hidden rounded-lg border border-gray-200"
-                          >
-                            <div className="flex items-center gap-3">
-                              <a
-                                href={restaurant.googleMapsUri}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
-                              >
-                                <p className="font-semibold">
-                                  {restaurant.displayName.text}
-                                </p>
-                                <p className="mt-1 text-sm text-gray-500">
-                                  {restaurant.formattedAddress}
-                                </p>
-                                <p className="mt-1 text-sm text-gray-500">
-                                  거리: {(distance / 1000).toFixed(1)}km
-                                </p>
-                              </a>
-                              <div className="shrink-0 pr-3">
-                                <FavoriteButton restaurant={restaurant} />
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => onRestaurantMapSelect(restaurant)}
-                              className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                            >
-                              지도에서 보기
-                            </button>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </>
-                )}
-                {hasNextPage && (
+        <form onSubmit={handleFormSubmit} className="flex gap-2">
+          <input
+            type="search"
+            value={keyword}
+            onFocus={handleFocusSearch}
+            onKeyDown={handleSearchKeyDown}
+            onChange={(e) => handleKeywordChange(e.target.value)}
+            placeholder={
+              searchMode === "region"
+                ? "예: 강남역, 홍대입구, 신림동"
+                : "예: 맥도날드, 강강술래, 프랭크버거"
+            }
+            className="min-w-0 flex-1 rounded-full border border-gray-300 px-5 py-3 outline-none focus:border-blue-500"
+          />
+          <button
+            type="submit"
+            disabled={!keyword.trim()}
+            className="rounded-full bg-blue-600 px-5 py-3 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            검색
+          </button>
+        </form>
+        {showHistory && (
+          <SearchHistoryList
+            mode={searchMode}
+            onSelect={handleSelectHistory}
+            onRequestClearAll={handleRequestClearHistory}
+          />
+        )}
+        {currentKeyword !== "" && (
+          <div className="mt-3 flex min-h-[40px] flex-wrap items-center justify-between gap-2">
+            {resultKeyword !== "" && resultKeyword === currentKeyword && (
+              <h3 className="font-semibold">
+                &quot;{resultKeyword}&quot; 검색 결과
+              </h3>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              {searchMode === "restaurant" &&
+                restaurantSearchKeyword !== "" &&
+                !restaurantSearching &&
+                !restaurantSearchError && (
                   <button
                     type="button"
-                    onClick={handleLoadMore}
-                    disabled={loadingMore || isFetching}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    onClick={() =>
+                      setRestaurantResultsOpen(!restaurantResultsOpen)
+                    }
+                    className="h-10 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    {loadingMore ? "추가 검색 중..." : "음식점 더보기"}
+                    {restaurantResultsOpen ? "접기" : "펼치기"}
                   </button>
                 )}
-                {loadMoreError && (
-                  <p className="text-sm text-red-500">{loadMoreError}</p>
-                )}
+
+              <button
+                type="button"
+                onClick={
+                  searchMode === "region"
+                    ? handleClearRegionSearch
+                    : handleClearRestaurantSearch
+                }
+                className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-600 hover:bg-red-50"
+              >
+                검색 초기화
+              </button>
+            </div>
+          </div>
+        )}
+        {searchMode === "region" && (
+          <div className="space-y-3">
+            {searching && (
+              <p className="mt-3 text-sm text-gray-500">검색 중...</p>
+            )}
+
+            {searchError && (
+              <p className="mt-3 text-sm text-red-500">{searchError}</p>
+            )}
+            {previewKeyword !== "" && previewKeyword === currentKeyword && (
+              <p className="mt-3 text-sm text-gray-500">
+                선택한 지역을 기준으로 맛집을 검색합니다.
+              </p>
+            )}
+            {resultsQuery === currentKeyword && regionResults.length > 0 && (
+              <div className="mt-3 space-y-1 rounded-xl border border-gray-200 p-2">
+                {regionResults.map((region) => (
+                  <button
+                    key={region.id}
+                    type="button"
+                    onClick={() => handleSelectRegion(region)}
+                    className="w-full rounded-lg px-3 py-3 text-left hover:bg-gray-100"
+                  >
+                    <p className="text-sm font-medium">{region.name}</p>
+                    {region.address !== region.name && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        {region.address}
+                      </p>
+                    )}
+                  </button>
+                ))}
               </div>
             )}
-        </div>
-      )}
-    </section>
+          </div>
+        )}
+        {searchMode === "restaurant" && (
+          <div className="space-y-3">
+            {restaurantSearching && (
+              <p className="mt-3 text-sm text-gray-500">음식점 검색 중...</p>
+            )}
+            {searchError && (
+              <p className="mt-3 text-sm text-red-500">{searchError}</p>
+            )}
+            {restaurantSearchError && (
+              <p className="mt-3 text-sm text-red-500">
+                음식점 검색에 실패했습니다.
+              </p>
+            )}
+            {!restaurantSearching &&
+              !searchError &&
+              !restaurantSearchError &&
+              restaurantSearchKeyword !== "" &&
+              restaurantResultsOpen && (
+                <div className="mt-3 space-y-3">
+                  {restaurantResults.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      {hasNextPage
+                        ? "현재 검색 결과에 일치하는 음식점이 없습니다. 더보기를 눌러 확인해보세요."
+                        : "검색 결과가 없습니다."}
+                    </p>
+                  ) : (
+                    <>
+                      <h4 className="font-semibold">
+                        주변 음식점 ({nearbyRestaurants.length})
+                      </h4>
+
+                      {nearbyRestaurants.length === 0 && (
+                        <p className="text-sm text-gray-500">
+                          검색 반경 안에 음식점이 없습니다.
+                        </p>
+                      )}
+                      {nearbyRestaurants.map(({ restaurant, distance }) => (
+                        <div
+                          key={restaurant.id}
+                          className="overflow-hidden rounded-lg border border-gray-200"
+                        >
+                          <div className="flex items-center gap-3">
+                            <a
+                              href={restaurant.googleMapsUri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
+                            >
+                              <p className="font-semibold">
+                                {restaurant.displayName.text}
+                              </p>
+                              <p className="mt-1 text-sm text-gray-500">
+                                {restaurant.formattedAddress}
+                              </p>
+                              <p className="mt-1 text-sm text-blue-600">
+                                거리: {Math.round(distance)}m
+                              </p>
+                              <p className="mt-1 text-sm text-blue-600">
+                                도보 약 {calculateWalkingMinutes(distance)}분
+                              </p>
+                            </a>
+                            <div className="shrink-0 pr-3">
+                              <FavoriteButton restaurant={restaurant} />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onRestaurantMapSelect(restaurant)}
+                            className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                          >
+                            지도에서 보기
+                          </button>
+                        </div>
+                      ))}
+                      {outsideRestaurants.length > 0 && (
+                        <>
+                          <h4 className="pt-3 font-semibold">
+                            검색 반경 밖 ({outsideRestaurants.length})
+                          </h4>
+                          {outsideRestaurants.map(
+                            ({ restaurant, distance }) => (
+                              <div
+                                key={restaurant.id}
+                                className="overflow-hidden rounded-lg border border-gray-200"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <a
+                                    href={restaurant.googleMapsUri}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
+                                  >
+                                    <p className="font-semibold">
+                                      {restaurant.displayName.text}
+                                    </p>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                      {restaurant.formattedAddress}
+                                    </p>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                      거리: {(distance / 1000).toFixed(1)}km
+                                    </p>
+                                  </a>
+                                  <div className="shrink-0 pr-3">
+                                    <FavoriteButton restaurant={restaurant} />
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onRestaurantMapSelect(restaurant)
+                                  }
+                                  className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                                >
+                                  지도에서 보기
+                                </button>
+                              </div>
+                            ),
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                  {hasNextPage && (
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      disabled={loadingMore || isFetching}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {loadingMore ? "추가 검색 중..." : "음식점 더보기"}
+                    </button>
+                  )}
+                  {loadMoreError && (
+                    <p className="text-sm text-red-500">{loadMoreError}</p>
+                  )}
+                </div>
+              )}
+          </div>
+        )}
+      </section>
+      <ConfirmModal
+        isOpen={deleteHistoryModalOpen}
+        title={`${searchMode === "region" ? "지역" : "음식점"} 검색 기록을 모두 삭제할까요?`}
+        description={`저장된 ${searchMode === "region" ? "지역" : "음식점"} 검색 기록만 삭제됩니다.`}
+        confirmText="전체 삭제"
+        onCancel={handleCancelClearHistory}
+        onConfirm={handleConfirmClearHistory}
+      />
+    </>
   );
 }
 
