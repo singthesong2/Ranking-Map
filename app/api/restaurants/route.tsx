@@ -2,6 +2,7 @@ import type { Restaurant, RestaurantCategory } from "@/types/restaurant";
 import {
   classifyRestaurant,
   isExcludedRestaurant,
+  isRestaurantPlace,
 } from "@/utils/restaurantClassifier";
 import { calculateDistance } from "@/utils/calculateDistance";
 
@@ -157,9 +158,12 @@ export async function POST(request: Request) {
       },
 
       body: JSON.stringify({
-        includedTypes: CATEGORY_TYPES[category] ??
-          CATEGORY_TYPES.all ?? ["restaurant"],
-        maxResultCount: 20,
+        ...(category === "all"
+          ? { includedPrimaryTypes: ["restaurant"] }
+          : {
+              includedTypes: CATEGORY_TYPES[category] ??
+                CATEGORY_TYPES.all ?? ["restaurant"],
+            }),
         locationRestriction: {
           circle: {
             center: {
@@ -189,7 +193,7 @@ export async function POST(request: Request) {
   );
   const filteredPlaces =
     category === "all"
-      ? deletePlaces
+      ? deletePlaces.filter(isRestaurantPlace)
       : deletePlaces.filter(
           (restaurant) => classifyRestaurant(restaurant) === category,
         );
