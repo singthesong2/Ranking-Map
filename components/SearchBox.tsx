@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import useDebounce from "@/hooks/useDebounce";
 import { normalize, removeRegionSuffix } from "@/utils/regionSearch";
@@ -8,6 +8,7 @@ import type { Restaurant } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { calculateWalkingMinutes } from "@/utils/calculateDistance";
 import useRestaurantSearch from "@/hooks/useRestaurantSearch";
+import useClickOutside from "@/hooks/useClickOutside";
 import { useMapStore } from "@/stores/useMapStore";
 import { useToastStore } from "@/stores/useToastStore";
 import { useSearchHistoryStore } from "@/stores/useSearchHistoryStore";
@@ -106,6 +107,7 @@ function SearchBox({
   const [deleteHistoryModalOpen, setDeleteHistoryModalOpen] = useState(false);
   const requestIdRef = useRef(0);
   const submittedKeywordRef = useRef("");
+  const historyAreaRef = useRef<HTMLDivElement>(null);
 
   const radius = useMapStore((state) => state.radius);
   const restaurantResultsOpen = useMapStore(
@@ -167,6 +169,7 @@ function SearchBox({
     }
   };
   const handleRequestClearHistory = () => {
+    setShowHistory(false);
     setDeleteHistoryModalOpen(true);
   };
   const handleCancelClearHistory = () => {
@@ -192,7 +195,7 @@ function SearchBox({
     setSearchError("");
     setSearching(false);
     setManualRestaurantKeyword("");
-    setShowHistory(true);
+    setShowHistory(false);
     onRestaurantMapSelect(null);
   };
 
@@ -217,7 +220,7 @@ function SearchBox({
     setKeyword("");
     setPreviewKeyword("");
     setManualRestaurantKeyword("");
-    setShowHistory(true);
+    setShowHistory(false);
     onRestaurantMapSelect(null);
     setSearchError("");
   };
@@ -229,7 +232,7 @@ function SearchBox({
     setPreviewKeyword("");
     setSearching(false);
     setSearchError("");
-    setShowHistory(true);
+    setShowHistory(false);
     onRestaurantMapSelect(null);
     setRestaurantResultsOpen(true);
   };
@@ -334,6 +337,12 @@ function SearchBox({
       radius: item.radius,
     });
   };
+
+  const handleCloseHistory = useCallback(() => {
+    setShowHistory(false);
+  }, []);
+
+  useClickOutside(historyAreaRef, handleCloseHistory, showHistory);
 
   const handleSearch = async () => {
     const query = keyword.trim();
@@ -489,35 +498,40 @@ function SearchBox({
           </button>
         </div>
 
-        <form onSubmit={handleFormSubmit} className="flex gap-2">
-          <input
-            type="search"
-            value={keyword}
-            onFocus={handleFocusSearch}
-            onKeyDown={handleSearchKeyDown}
-            onChange={(e) => handleKeywordChange(e.target.value)}
-            placeholder={
-              searchMode === "region"
-                ? "예: 강남역, 홍대입구, 신림동"
-                : "예: 맥도날드, 강강술래, 프랭크버거"
-            }
-            className="min-w-0 flex-1 rounded-full border border-gray-300 px-5 py-3 outline-none focus:border-blue-500"
-          />
-          <button
-            type="submit"
-            disabled={!keyword.trim()}
-            className="rounded-full bg-blue-600 px-5 py-3 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            검색
-          </button>
-        </form>
-        {showHistory && (
-          <SearchHistoryList
-            mode={searchMode}
-            onSelect={handleSelectHistory}
-            onRequestClearAll={handleRequestClearHistory}
-          />
-        )}
+        <div ref={historyAreaRef} className="relative">
+          <form onSubmit={handleFormSubmit} className="flex gap-2">
+            <input
+              type="search"
+              value={keyword}
+              onFocus={handleFocusSearch}
+              onClick={handleFocusSearch}
+              onKeyDown={handleSearchKeyDown}
+              onChange={(e) => handleKeywordChange(e.target.value)}
+              placeholder={
+                searchMode === "region"
+                  ? "예: 강남역, 홍대입구, 신림동"
+                  : "예: 맥도날드, 강강술래, 프랭크버거"
+              }
+              className="min-w-0 flex-1 rounded-full border border-gray-300 px-5 py-3 outline-none focus:border-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={!keyword.trim()}
+              className="rounded-full bg-blue-600 px-5 py-3 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              검색
+            </button>
+          </form>
+          {showHistory && (
+            <div className="absolute top-full right-0 left-0 z-30">
+              <SearchHistoryList
+                mode={searchMode}
+                onSelect={handleSelectHistory}
+                onRequestClearAll={handleRequestClearHistory}
+              />
+            </div>
+          )}
+        </div>
         {currentKeyword !== "" && (
           <div className="mt-3 flex min-h-[40px] flex-wrap items-center justify-between gap-2">
             {resultKeyword !== "" && resultKeyword === currentKeyword && (
