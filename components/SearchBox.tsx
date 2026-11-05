@@ -476,10 +476,10 @@ function SearchBox({
             type="button"
             onClick={() => handleModeChange("region")}
             aria-pressed={searchMode === "region"}
-            className={`rounded-full px-4 py-2 ${
+            className={`rounded-full px-4 py-2 lg:rounded-xl lg:py-2.5 lg:text-sm lg:transition-colors ${
               searchMode === "region"
-                ? "bg-gray-100 font-semibold text-gray-900"
-                : "text-gray-400 hover:bg-gray-50"
+                ? "bg-[#B5616E] font-semibold text-white hover:bg-[#9D5360]"
+                : "bg-[#F4F1F1] text-[#8B8082] hover:bg-[#F8EFF0]"
             }`}
           >
             지역 검색
@@ -488,10 +488,10 @@ function SearchBox({
             type="button"
             onClick={() => handleModeChange("restaurant")}
             aria-pressed={searchMode === "restaurant"}
-            className={`rounded-full px-4 py-2 ${
+            className={`rounded-full px-4 py-2 lg:rounded-xl lg:py-2.5 lg:text-sm lg:transition-colors ${
               searchMode === "restaurant"
-                ? "bg-gray-100 font-semibold text-gray-900"
-                : "text-gray-400 hover:bg-gray-50"
+                ? "bg-[#B5616E] font-semibold text-white hover:bg-[#9D5360]"
+                : "bg-[#F4F1F1] text-[#8B8082] hover:bg-[#F8EFF0]"
             }`}
           >
             음식점 검색
@@ -512,12 +512,12 @@ function SearchBox({
                   ? "예: 강남역, 홍대입구, 신림동"
                   : "예: 맥도날드, 강강술래, 프랭크버거"
               }
-              className="min-w-0 flex-1 rounded-full border border-gray-300 px-5 py-3 outline-none focus:border-blue-500"
+              className="min-w-0 flex-1 rounded-full border border-gray-300 px-5 py-3 outline-none focus:border-blue-500 lg:h-12 lg:rounded-2xl lg:border-[#E7DEDD] lg:bg-[#FCFAF9] lg:px-4 lg:text-sm lg:text-[#302B2D] lg:placeholder:text-[#9F9495] lg:focus:border-[#B5616E] lg:focus:ring-4 lg:focus:ring-[#B5616E]/10"
             />
             <button
               type="submit"
               disabled={!keyword.trim()}
-              className="rounded-full bg-blue-600 px-5 py-3 text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-full bg-[#B5616E] px-5 py-3 text-white hover:bg-[#9D5360] disabled:opacity-50 lg:rounded-2xl lg:px-5 lg:text-sm lg:font-semibold"
             >
               검색
             </button>
@@ -535,7 +535,7 @@ function SearchBox({
         {currentKeyword !== "" && (
           <div className="mt-3 flex min-h-[40px] flex-wrap items-center justify-between gap-2">
             {resultKeyword !== "" && resultKeyword === currentKeyword && (
-              <h3 className="font-semibold">
+              <h3 className="font-semibold lg:text-sm lg:font-semibold lg:text-[#3A3032]">
                 &quot;{resultKeyword}&quot; 검색 결과
               </h3>
             )}
@@ -549,7 +549,7 @@ function SearchBox({
                     onClick={() =>
                       setRestaurantResultsOpen(!restaurantResultsOpen)
                     }
-                    className="h-10 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 hover:bg-gray-50"
+                    className="h-10 rounded-lg border border-gray-300 px-3 text-sm text-gray-700 hover:bg-gray-50 lg:rounded-xl lg:border-[#EAE0DF] lg:text-xs"
                   >
                     {restaurantResultsOpen ? "접기" : "펼치기"}
                   </button>
@@ -562,7 +562,7 @@ function SearchBox({
                     ? handleClearRegionSearch
                     : handleClearRestaurantSearch
                 }
-                className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-600 hover:bg-red-50"
+                className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-600 hover:bg-red-50 lg:rounded-xl lg:text-xs"
               >
                 검색 초기화
               </button>
@@ -584,13 +584,13 @@ function SearchBox({
               </p>
             )}
             {resultsQuery === currentKeyword && regionResults.length > 0 && (
-              <div className="mt-3 space-y-1 rounded-xl border border-gray-200 p-2">
+              <div className="mt-3 space-y-1 rounded-xl border border-gray-200 p-2 lg:rounded-2xl lg:border-[#EDE4E3] lg:bg-white lg:shadow-sm">
                 {regionResults.map((region) => (
                   <button
                     key={region.id}
                     type="button"
                     onClick={() => handleSelectRegion(region)}
-                    className="w-full rounded-lg px-3 py-3 text-left hover:bg-gray-100"
+                    className="w-full rounded-lg px-3 py-3 text-left hover:bg-gray-100 lg:rounded-xl lg:hover:bg-[#FBF0F1]"
                   >
                     <p className="text-sm font-medium">{region.name}</p>
                     {region.address !== region.name && (
@@ -631,7 +631,7 @@ function SearchBox({
                     </p>
                   ) : (
                     <>
-                      <h4 className="font-semibold">
+                      <h4 className="font-semibold lg:text-sm lg:font-semibold lg:text-[#3A3032]">
                         주변 음식점 ({nearbyRestaurants.length})
                       </h4>
 
@@ -643,36 +643,36 @@ function SearchBox({
                       {nearbyRestaurants.map(({ restaurant, distance }) => (
                         <div
                           key={restaurant.id}
-                          className="overflow-hidden rounded-lg border border-gray-200"
+                          className="overflow-hidden rounded-lg border border-gray-200 lg:rounded-2xl lg:border-[#EEE6E4] lg:bg-white lg:shadow-[0_4px_16px_rgba(70,40,40,0.04)]"
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 transition-colors hover:bg-[#FFFBFB] focus-within:bg-[#FFFBFB]">
                             <a
                               href={restaurant.googleMapsUri}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
                             >
-                              <p className="font-semibold">
+                              <p className="font-semibold lg:text-sm lg:font-semibold lg:text-[#3A3032]">
                                 {restaurant.displayName.text}
                               </p>
                               <p className="mt-1 text-sm text-gray-500">
                                 {restaurant.formattedAddress}
                               </p>
-                              <p className="mt-1 text-sm text-blue-600">
+                              <p className="mt-1 text-sm text-[#B5616E]">
                                 거리: {Math.round(distance)}m
                               </p>
-                              <p className="mt-1 text-sm text-blue-600">
+                              <p className="mt-1 text-sm text-[#B5616E]">
                                 도보 약 {calculateWalkingMinutes(distance)}분
                               </p>
                             </a>
-                            <div className="shrink-0 pr-3">
+                            <div className="shrink-0 pr-3 lg:pr-4">
                               <FavoriteButton restaurant={restaurant} />
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => onRestaurantMapSelect(restaurant)}
-                            className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                            className="w-full border-t border-[#F0E8E6] px-3 py-2 text-sm font-medium text-[#B5616E] transition-colors hover:bg-[#F8EFF0] hover:text-[#9D5360] focus-visible:outline-2 focus-visible:outline-[#B5616E] lg:py-2.5 lg:text-xs"
                           >
                             지도에서 보기
                           </button>
@@ -687,16 +687,16 @@ function SearchBox({
                             ({ restaurant, distance }) => (
                               <div
                                 key={restaurant.id}
-                                className="overflow-hidden rounded-lg border border-gray-200"
+                                className="overflow-hidden rounded-lg border border-gray-200 lg:rounded-2xl lg:border-[#EEE6E4] lg:bg-white lg:shadow-[0_4px_16px_rgba(70,40,40,0.04)]"
                               >
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 transition-colors hover:bg-[#FFFBFB] focus-within:bg-[#FFFBFB]">
                                   <a
                                     href={restaurant.googleMapsUri}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
+                                    className="min-w-0 flex-1 p-3 lg:p-4"
                                   >
-                                    <p className="font-semibold">
+                                    <p className="font-semibold lg:text-sm lg:font-semibold lg:text-[#3A3032]">
                                       {restaurant.displayName.text}
                                     </p>
                                     <p className="mt-1 text-sm text-gray-500">
@@ -706,7 +706,7 @@ function SearchBox({
                                       거리: {(distance / 1000).toFixed(1)}km
                                     </p>
                                   </a>
-                                  <div className="shrink-0 pr-3">
+                                  <div className="shrink-0 pr-3 lg:pr-4">
                                     <FavoriteButton restaurant={restaurant} />
                                   </div>
                                 </div>
@@ -715,7 +715,7 @@ function SearchBox({
                                   onClick={() =>
                                     onRestaurantMapSelect(restaurant)
                                   }
-                                  className="w-full border-t border-gray-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                                  className="w-full border-t border-[#F0E8E6] px-3 py-2 text-sm font-medium text-[#B5616E] transition-colors hover:bg-[#F8EFF0] hover:text-[#9D5360] focus-visible:outline-2 focus-visible:outline-[#B5616E] lg:py-2.5 lg:text-xs"
                                 >
                                   지도에서 보기
                                 </button>
@@ -731,7 +731,7 @@ function SearchBox({
                       type="button"
                       onClick={handleLoadMore}
                       disabled={loadingMore || isFetching}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 lg:rounded-xl lg:border-[#E9DEDD] lg:text-[#9E5260] lg:hover:bg-[#FFF7F8]"
                     >
                       {loadingMore ? "추가 검색 중..." : "음식점 더보기"}
                     </button>

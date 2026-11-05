@@ -6,6 +6,7 @@ import SearchBox from "@/components/SearchBox";
 import CategoryFilter from "@/components/CategoryFilter";
 import MapSection from "@/components/MapSection";
 import RankingList from "@/components/RankingList";
+import MapControls from "@/components/MapControls";
 import useCurrentlocation from "@/hooks/useCurrentlocation";
 import useRestaurants from "@/hooks/useRestaurants";
 import useDebounce from "@/hooks/useDebounce";
@@ -163,45 +164,58 @@ function Home() {
   }, [setSearchCenter, setRadius]);
 
   return (
-    <main className="min-h-screen bg-white text-black">
+    <main className="flex min-h-screen flex-col bg-white text-black lg:h-dvh lg:overflow-hidden">
       <Header onShareSearch={handleShareSearch} />
-      <SearchBox
-        latitude={centerLatitude}
-        longitude={centerLongitude}
-        onRestaurantMapSelect={(restaurant) => {
-          setSelectedRestaurant(restaurant ? { ...restaurant } : null);
-          setRestaurantResultsOpen(restaurant === null);
-        }}
-      />
-      <CategoryFilter
-        selectedCategory={selectedCategory}
-        onChangeCategory={setSelectedCategory}
-      />
-      <MapSection
-        latitude={latitude}
-        longitude={longitude}
-        searchLatitude={centerLatitude}
-        searchLongitude={centerLongitude}
-        onResetLocation={handleResetLocation}
-        sortOption={sortOption}
-        onSortChange={setSortOption}
-        restaurants={displayRestaurants}
-        onReturnToSearchLocation={() => {
-          setSelectedRestaurant(null);
-          setRestaurantResultsOpen(true);
-        }}
-        loading={loading}
-        error={error}
-      />
-      <RankingList
-        restaurants={displayRestaurants}
-        latitude={centerLatitude}
-        longitude={centerLongitude}
-        hasMore={hasMore}
-        onLoadMore={() => {
-          setVisibleCount((prev) => prev + 10);
-        }}
-      />
+      <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(360px,38%)_minmax(0,1fr)]">
+        <div className="contents lg:block lg:min-h-0 lg:overflow-y-auto lg:[scrollbar-gutter:stable] lg:border-r lg:border-[#EEE6E4] lg:bg-[#FFFDFC]">
+          <div className="order-1">
+            <SearchBox
+              latitude={centerLatitude}
+              longitude={centerLongitude}
+              onRestaurantMapSelect={(restaurant) => {
+                setSelectedRestaurant(restaurant ? { ...restaurant } : null);
+                setRestaurantResultsOpen(restaurant === null);
+              }}
+            />
+          </div>
+          <div className="order-2 lg:bg-white lg:px-5 lg:py-4">
+            <CategoryFilter
+              selectedCategory={selectedCategory}
+              onChangeCategory={setSelectedCategory}
+            />
+          </div>
+          <div className="order-4">
+            <MapControls sortOption={sortOption} onSortChange={setSortOption} />
+          </div>
+          <div className="order-5 lg:px-5 lg:py-5 lg:[&_article]:rounded-2xl lg:[&_article]:border-[#EEE6E4] lg:[&_li]:rounded-2xl lg:[&_li]:border-[#EEE6E4]">
+            <RankingList
+              restaurants={displayRestaurants}
+              latitude={centerLatitude}
+              longitude={centerLongitude}
+              hasMore={hasMore}
+              onLoadMore={() => {
+                setVisibleCount((prev) => prev + 10);
+              }}
+            />
+          </div>
+        </div>
+        <div className="order-3 min-w-0 lg:order-none lg:min-h-0">
+          <MapSection
+            latitude={latitude}
+            longitude={longitude}
+            searchLatitude={centerLatitude}
+            searchLongitude={centerLongitude}
+            onResetLocation={handleResetLocation}
+            restaurants={displayRestaurants}
+            onReturnToSearchLocation={() => {
+              setSelectedRestaurant(null);
+              setRestaurantResultsOpen(true);
+            }}
+            loading={loading}
+            error={error}
+          />
+        </div>
+      </div>
     </main>
   );
 }

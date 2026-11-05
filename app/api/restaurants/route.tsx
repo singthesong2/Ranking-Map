@@ -86,6 +86,7 @@ export async function POST(request: Request) {
 
         body: JSON.stringify({
           textQuery,
+          languageCode: "ko",
           pageSize: 20,
           rankPreference: "RELEVANCE",
           locationBias: {
@@ -164,6 +165,7 @@ export async function POST(request: Request) {
               includedTypes: CATEGORY_TYPES[category] ??
                 CATEGORY_TYPES.all ?? ["restaurant"],
             }),
+        languageCode: "ko",
         locationRestriction: {
           circle: {
             center: {
