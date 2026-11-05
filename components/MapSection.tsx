@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
-import type { Restaurant, RestaurantSort } from "@/types/restaurant";
+import type { Restaurant } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
 import { useMapStore } from "@/stores/useMapStore";
@@ -13,8 +13,6 @@ interface MapSectionProps {
   searchLatitude: number | null;
   searchLongitude: number | null;
   onResetLocation: () => void;
-  sortOption: RestaurantSort;
-  onSortChange: (sort: RestaurantSort) => void;
   restaurants: Restaurant[];
   onReturnToSearchLocation: () => void;
   loading: boolean;
@@ -27,8 +25,6 @@ function MapSection({
   searchLatitude,
   searchLongitude,
   onResetLocation,
-  sortOption,
-  onSortChange,
   restaurants,
   onReturnToSearchLocation,
   loading,
@@ -75,7 +71,7 @@ function MapSection({
   const createCurrentLocationMarker = () => {
     const marker = document.createElement("div");
     marker.className =
-      "w-5 h-5 rounded-full bg-blue-600 border-4 border-white box-border";
+      "w-5 h-5 rounded-full bg-[#9D5360] border-4 border-white box-border";
 
     return marker;
   };
@@ -177,9 +173,9 @@ function MapSection({
     radiusCircleRef.current = new window.kakao.maps.Circle({
       center: currentPosition,
       radius,
-      strokeWeight: 2,
-      strokeColor: "#3B82F6",
-      strokeOpacity: 0.8,
+      strokeWeight: 3,
+      strokeColor: "#B5616E",
+      strokeOpacity: 1,
       fillOpacity: 0,
     });
 
@@ -245,18 +241,30 @@ function MapSection({
     mapRef.current.setCenter(searchPosition);
   }, [searchLatitude, searchLongitude, mapReady]);
 
+  useEffect(() => {
+    if (!mapReady || !mapContainerRef.current || !mapRef.current) return;
+
+    const map = mapRef.current;
+    const observer = new ResizeObserver(() => {
+      map.relayout();
+    });
+
+    observer.observe(mapContainerRef.current);
+    return () => observer.disconnect();
+  }, [mapReady]);
+
   return (
-    <section>
+    <section className="min-w-0 lg:h-full">
       <Script
         src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
         strategy="afterInteractive"
         onReady={handleLoad}
       />
-      <div className="relative">
-        <div ref={mapContainerRef} className="h-96 w-full" />
+      <div className="relative lg:h-full">
+        <div ref={mapContainerRef} className="h-96 w-full lg:h-full" />
 
         {isSelectingLocation && (
-          <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-full">
+          <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 z-20 -translate-x-1/2 -translate-y-full">
             <svg width="36" height="48" viewBox="0 0 24 36" aria-hidden="true">
               <path
                 d="M12 1C5.9 1 1 5.9 1 12c0 9 11 22 11 22s11-13 11-22C23 5.9 18.1 1 12 1Z"
@@ -319,69 +327,6 @@ function MapSection({
             )}
           </div>
         )}
-      </div>
-      <div className="p-4">
-        <div className="mb-2 flex justify-between">
-          <span className="font-medium">검색 반경</span>
-          <span className="font-bold">
-            {radius >= 1000 ? `${(radius / 1000).toFixed(1)}km` : `${radius}m`}
-          </span>
-        </div>
-        <button
-          onClick={() => onSortChange("recommended")}
-          className={
-            sortOption === "recommended"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          추천순
-        </button>
-        <button
-          onClick={() => onSortChange("rating")}
-          className={
-            sortOption === "rating"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          평점순
-        </button>
-        <button
-          onClick={() => onSortChange("reviews")}
-          className={
-            sortOption === "reviews"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          리뷰 많은 순
-        </button>
-        <button
-          onClick={() => onSortChange("distance")}
-          className={
-            sortOption === "distance"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          가까운 순
-        </button>
-        <input
-          type="range"
-          min={100}
-          max={5000}
-          step={100}
-          value={radius}
-          onChange={(e) => {
-            setRadius(Number(e.target.value));
-          }}
-          className="w-full accent-blue-600"
-        />
-        <div className="mt-1 flex justify-between text-sm text-gray-500">
-          <span>100m</span>
-          <span>5km</span>
-        </div>
       </div>
     </section>
   );
