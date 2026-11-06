@@ -36,9 +36,9 @@ export function useSelectedRestaurantMarker({
 
     const markerImage = new window.kakao.maps.MarkerImage(
       "/restaurant-pin.svg",
-      new window.kakao.maps.Size(40, 52),
+      new window.kakao.maps.Size(90, 78),
       {
-        offset: new window.kakao.maps.Point(20, 52),
+        offset: new window.kakao.maps.Point(45, 78),
       },
     );
 
@@ -104,7 +104,7 @@ export function useSelectedRestaurantMarker({
         position,
         content: infoBox,
         xAnchor: 0.5,
-        yAnchor: 1.9,
+        yAnchor: 2.3,
         zIndex: 210,
       });
 

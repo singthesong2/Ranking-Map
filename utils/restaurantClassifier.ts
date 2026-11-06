@@ -1,5 +1,26 @@
 import type { Restaurant, RestaurantCategory } from "@/types/restaurant";
 
+const ADDITIONAL_RESTAURANT_TYPES = new Set([
+  "steak_house",
+  "bistro",
+  "diner",
+  "food_court",
+  "sandwich_shop",
+  "bar_and_grill",
+]);
+
+export function isRestaurantPlace(restaurant: Restaurant): boolean {
+  const primaryType = restaurant.primaryType;
+
+  if (!primaryType) return false;
+
+  return (
+    primaryType === "restaurant" ||
+    primaryType.endsWith("_restaurant") ||
+    ADDITIONAL_RESTAURANT_TYPES.has(primaryType)
+  );
+}
+
 export function isExcludedRestaurant(restaurant: Restaurant) {
   const name = restaurant.displayName.text.toLowerCase();
 

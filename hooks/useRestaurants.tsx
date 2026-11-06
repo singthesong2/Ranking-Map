@@ -1,88 +1,95 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RestaurantCategory, Restaurant } from "@/types/restaurant";
 
 interface RestaurantsResponse {
   places?: Restaurant[];
 }
 
-function useRestaurants() {
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const lastSearchKeyRef = useRef<string | null>(null);
-  const requestIdRef = useRef(0);
+interface UseRestaurantsParams {
+  latitude: number | null;
+  longitude: number | null;
+  radius: number;
+  category: RestaurantCategory;
+}
 
-  const fetchRestaurants = useCallback(
-    async (
-      latitude: number,
-      longitude: number,
-      radius: number,
-      category: RestaurantCategory,
-    ) => {
-      const searchKey = `${category}:${latitude.toFixed(5)}:${longitude.toFixed(5)}`;
-      const requestId = ++requestIdRef.current;
-      if (lastSearchKeyRef.current !== searchKey) {
-        lastSearchKeyRef.current = searchKey;
-        setRestaurants([]);
+function useRestaurants({
+  latitude,
+  longitude,
+  radius,
+  category,
+}: UseRestaurantsParams) {
+  const queryClient = useQueryClient();
+  const latKey = latitude?.toFixed(5) ?? null;
+  const lngKey = longitude?.toFixed(5) ?? null;
+
+  const {
+    data,
+    isFetching,
+    error: queryError,
+  } = useQuery<Restaurant[]>({
+    queryKey: ["restaurants", category, latKey, lngKey, radius],
+
+    queryFn: async ({ signal }) => {
+      if (latitude === null || longitude === null) {
+        throw new Error("검색 위치가 없습니다.");
       }
-      try {
-        setLoading(true);
-        setError(null);
 
-        const response = await fetch("/api/restaurants", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            latitude,
-            longitude,
-            radius,
-            category,
-          }),
-        });
+      const response = await fetch("/api/restaurants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude,
+          radius,
+          category,
+        }),
+        signal,
+      });
 
-        if (!response.ok) throw new Error();
-
-        const data: RestaurantsResponse = await response.json();
-        if (
-          requestId !== requestIdRef.current ||
-          lastSearchKeyRef.current !== searchKey
-        ) {
-          return;
-        }
-        const newRestaurants = data.places ?? [];
-
-        setRestaurants((prevRestaurants) => {
-          const restaurantMap = new Map<string, Restaurant>();
-          newRestaurants.forEach((restaurant) => {
-            restaurantMap.set(restaurant.id, restaurant);
-          });
-          prevRestaurants.forEach((restaurant) => {
-            if (!restaurantMap.has(restaurant.id)) {
-              restaurantMap.set(restaurant.id, restaurant);
-            }
-          });
-
-          return Array.from(restaurantMap.values());
-        });
-      } catch {
-        if (requestId === requestIdRef.current)
-          setError("맛집 정보를 불러오지 못했습니다.");
-      } finally {
-        if (requestId === requestIdRef.current) setLoading(false);
+      if (!response.ok) {
+        throw new Error("맛집 정보 요청 실패");
       }
+
+      const result: RestaurantsResponse = await response.json();
+      return result.places ?? [];
     },
-    [],
-  );
+
+    enabled: latitude !== null && longitude !== null,
+    staleTime: 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const restaurants = useMemo(() => {
+    if (latKey === null || lngKey === null) {
+      return [];
+    }
+    const restaurantMap = new Map<string, Restaurant>();
+    data?.forEach((restaurant) => {
+      restaurantMap.set(restaurant.id, restaurant);
+    });
+    const cachedResults = queryClient.getQueriesData<Restaurant[]>({
+      queryKey: ["restaurants", category, latKey, lngKey],
+    });
+    cachedResults.forEach(([, cachedRestaurants]) => {
+      cachedRestaurants?.forEach((restaurant) => {
+        if (!restaurantMap.has(restaurant.id)) {
+          restaurantMap.set(restaurant.id, restaurant);
+        }
+      });
+    });
+
+    return Array.from(restaurantMap.values());
+  }, [data, queryClient, category, latKey, lngKey, radius]);
 
   return {
     restaurants,
-    loading,
-    error,
-    fetchRestaurants,
+    loading: isFetching,
+    error: queryError ? "맛집 정보를 불러오지 못했습니다." : null,
   };
 }
 

@@ -6,57 +6,51 @@ import SearchBox from "@/components/SearchBox";
 import CategoryFilter from "@/components/CategoryFilter";
 import MapSection from "@/components/MapSection";
 import RankingList from "@/components/RankingList";
+import MapControls from "@/components/MapControls";
 import useCurrentlocation from "@/hooks/useCurrentlocation";
 import useRestaurants from "@/hooks/useRestaurants";
 import useDebounce from "@/hooks/useDebounce";
-import type {
-  RestaurantCategory,
-  RestaurantSort,
-  Restaurant,
-} from "@/types/restaurant";
+import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { classifyRestaurant } from "@/utils/restaurantClassifier";
+import { useMapStore } from "@/stores/useMapStore";
+import { createShareUrl } from "@/utils/shareSearch";
+import { readShareSearch } from "@/utils/shareSearch";
+import { useToastStore } from "@/stores/useToastStore";
 
 function Home() {
   const [selectedCategory, setSelectedCategory] =
     useState<RestaurantCategory>("all");
-  const [radius, setRadius] = useState(1000);
   const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
-  const [searchCenter, setSearchCenter] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const handleResetLocation = () => {
-    setSearchCenter(null);
-    setSelectedRestaurant(null);
-    setVisibleCount(10);
-  };
-  const [selectedRestaurant, setSelectedRestaurant] =
-    useState<Restaurant | null>(null);
-  const [restaurantResultsOpen, setRestaurantResultsOpen] = useState(true);
   const [visibleCount, setVisibleCount] = useState(10);
+  const radius = useMapStore((state) => state.radius);
+  const setRadius = useMapStore((state) => state.setRadius);
+  const setRestaurantResultsOpen = useMapStore(
+    (state) => state.setRestaurantResultsOpen,
+  );
   const debouncedRadius = useDebounce(radius, 1000);
   const { latitude, longitude } = useCurrentlocation();
-  const { restaurants, loading, error, fetchRestaurants } = useRestaurants();
+  const searchCenter = useMapStore((state) => state.searchCenter);
+  const setSearchCenter = useMapStore((state) => state.setSearchCenter);
+  const setSelectedRestaurant = useMapStore(
+    (state) => state.setSelectedRestaurant,
+  );
   const centerLatitude = searchCenter?.latitude ?? latitude;
   const centerLongitude = searchCenter?.longitude ?? longitude;
+  const { restaurants, loading, error } = useRestaurants({
+    latitude: centerLatitude,
+    longitude: centerLongitude,
+    radius: debouncedRadius,
+    category: selectedCategory,
+  });
 
-  useEffect(() => {
-    if (centerLatitude === null || centerLongitude === null) return;
+  const showToast = useToastStore((state) => state.showToast);
 
-    fetchRestaurants(
-      centerLatitude,
-      centerLongitude,
-      debouncedRadius,
-      selectedCategory,
-    );
-  }, [
-    centerLatitude,
-    centerLongitude,
-    debouncedRadius,
-    selectedCategory,
-    fetchRestaurants,
-  ]);
+  const handleResetLocation = () => {
+    setSearchCenter(null);
+    setRestaurantResultsOpen(true);
+    setVisibleCount(10);
+  };
 
   const sortedRestaurants = useMemo(() => {
     if (centerLatitude === null || centerLongitude === null) return [];
@@ -123,59 +117,105 @@ function Home() {
     setVisibleCount(10);
   }, [selectedCategory, sortOption, radius, centerLatitude, centerLongitude]);
 
+  const handleShareSearch = async () => {
+    if (centerLatitude === null || centerLongitude === null) {
+      showToast("검색 위치 정보를 가져오지 못했어요.", "error");
+      return;
+    }
+
+    const shareUrl = createShareUrl({
+      latitude: centerLatitude,
+      longitude: centerLongitude,
+      radius,
+      category: selectedCategory,
+      sort: sortOption,
+    });
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "맛집 랭킹",
+          text: "내가 검색한 맛집을 확인해 봐!",
+          url: shareUrl,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      showToast("검색 링크를 복사했어요.", "success");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      showToast("링크 공유에 실패했어요.", "error");
+    }
+  };
+
+  useEffect(() => {
+    const shared = readShareSearch();
+
+    if (!shared) return;
+
+    setSearchCenter({
+      latitude: shared.latitude,
+      longitude: shared.longitude,
+    });
+
+    if (shared.radius !== undefined) setRadius(shared.radius);
+    if (shared.category !== undefined) setSelectedCategory(shared.category);
+    if (shared.sort !== undefined) setSortOption(shared.sort);
+  }, [setSearchCenter, setRadius]);
+
   return (
-    <main className="min-h-screen bg-white text-black">
-      <Header />
-      <SearchBox
-        latitude={centerLatitude}
-        longitude={centerLongitude}
-        radius={radius}
-        restaurantResultsOpen={restaurantResultsOpen}
-        onRestaurantResultsOpenChange={setRestaurantResultsOpen}
-        onRegionSelect={(latitude, longitude) => {
-          setSearchCenter({ latitude, longitude });
-          setVisibleCount(10);
-        }}
-        onRestaurantMapSelect={(restaurant) => {
-          setSelectedRestaurant(restaurant ? { ...restaurant } : null);
-          setRestaurantResultsOpen(restaurant === null);
-        }}
-      />
-      <CategoryFilter
-        selectedCategory={selectedCategory}
-        onChangeCategory={setSelectedCategory}
-      />
-      <MapSection
-        latitude={latitude}
-        longitude={longitude}
-        searchLatitude={centerLatitude}
-        searchLongitude={centerLongitude}
-        onSearchCenterChange={(latitude, longitude) => {
-          setSearchCenter({ latitude, longitude });
-        }}
-        onResetLocation={handleResetLocation}
-        radius={radius}
-        onRadiusChange={setRadius}
-        sortOption={sortOption}
-        onSortChange={setSortOption}
-        restaurants={displayRestaurants}
-        selectedRestaurant={selectedRestaurant}
-        onReturnToSearchLocation={() => {
-          setSelectedRestaurant(null);
-          setRestaurantResultsOpen(true);
-        }}
-        loading={loading}
-        error={error}
-      />
-      <RankingList
-        restaurants={displayRestaurants}
-        latitude={centerLatitude}
-        longitude={centerLongitude}
-        hasMore={hasMore}
-        onLoadMore={() => {
-          setVisibleCount((prev) => prev + 10);
-        }}
-      />
+    <main className="flex min-h-screen flex-col bg-white text-black lg:h-dvh lg:overflow-hidden">
+      <Header onShareSearch={handleShareSearch} />
+      <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(360px,38%)_minmax(0,1fr)]">
+        <div className="contents lg:block lg:min-h-0 lg:overflow-y-auto lg:[scrollbar-gutter:stable] lg:border-r lg:border-[#EEE6E4] lg:bg-[#FFFDFC]">
+          <div className="order-1">
+            <SearchBox
+              latitude={centerLatitude}
+              longitude={centerLongitude}
+              onRestaurantMapSelect={(restaurant) => {
+                setSelectedRestaurant(restaurant ? { ...restaurant } : null);
+                setRestaurantResultsOpen(restaurant === null);
+              }}
+            />
+          </div>
+          <div className="order-2 lg:bg-white lg:px-5 lg:py-4">
+            <CategoryFilter
+              selectedCategory={selectedCategory}
+              onChangeCategory={setSelectedCategory}
+            />
+          </div>
+          <div className="order-4">
+            <MapControls sortOption={sortOption} onSortChange={setSortOption} />
+          </div>
+          <div className="order-5 lg:px-5 lg:py-5 lg:[&_article]:rounded-2xl lg:[&_article]:border-[#EEE6E4] lg:[&_li]:rounded-2xl lg:[&_li]:border-[#EEE6E4]">
+            <RankingList
+              restaurants={displayRestaurants}
+              latitude={centerLatitude}
+              longitude={centerLongitude}
+              hasMore={hasMore}
+              onLoadMore={() => {
+                setVisibleCount((prev) => prev + 10);
+              }}
+            />
+          </div>
+        </div>
+        <div className="order-3 min-w-0 lg:order-none lg:min-h-0">
+          <MapSection
+            latitude={latitude}
+            longitude={longitude}
+            searchLatitude={centerLatitude}
+            searchLongitude={centerLongitude}
+            onResetLocation={handleResetLocation}
+            restaurants={displayRestaurants}
+            onReturnToSearchLocation={() => {
+              setSelectedRestaurant(null);
+              setRestaurantResultsOpen(true);
+            }}
+            loading={loading}
+            error={error}
+          />
+        </div>
+      </div>
     </main>
   );
 }

@@ -2,9 +2,10 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
-import type { Restaurant, RestaurantSort } from "@/types/restaurant";
+import type { Restaurant } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
+import { useMapStore } from "@/stores/useMapStore";
 
 interface MapSectionProps {
   latitude: number | null;
@@ -12,13 +13,7 @@ interface MapSectionProps {
   searchLatitude: number | null;
   searchLongitude: number | null;
   onResetLocation: () => void;
-  onSearchCenterChange: (latitude: number, longitude: number) => void;
-  radius: number;
-  onRadiusChange: (radius: number) => void;
-  sortOption: RestaurantSort;
-  onSortChange: (sort: RestaurantSort) => void;
   restaurants: Restaurant[];
-  selectedRestaurant: Restaurant | null;
   onReturnToSearchLocation: () => void;
   loading: boolean;
   error: string | null;
@@ -29,14 +24,8 @@ function MapSection({
   longitude,
   searchLatitude,
   searchLongitude,
-  onSearchCenterChange,
   onResetLocation,
-  radius,
-  onRadiusChange,
-  sortOption,
-  onSortChange,
   restaurants,
-  selectedRestaurant,
   onReturnToSearchLocation,
   loading,
   error,
@@ -48,6 +37,9 @@ function MapSection({
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const searchPinRef = useRef<kakao.maps.Marker | null>(null);
+
+  const selectedRestaurant = useMapStore((state) => state.selectedRestaurant);
+  const setSearchCenter = useMapStore((state) => state.setSearchCenter);
 
   useRestaurantMarkers({
     mapReady,
@@ -66,23 +58,17 @@ function MapSection({
     searchLongitude,
   });
 
-  const isCustomSearch =
-    latitude !== null &&
-    longitude !== null &&
-    searchLatitude !== null &&
-    searchLongitude !== null &&
-    (searchLatitude !== latitude || searchLongitude !== longitude);
-
+  const radius = useMapStore((state) => state.radius);
   const createCurrentLocationMarker = () => {
     const marker = document.createElement("div");
     marker.className =
-      "w-5 h-5 rounded-full bg-blue-600 border-4 border-white box-border";
+      "w-5 h-5 rounded-full bg-[#9D5360] border-4 border-white box-border";
 
     return marker;
   };
 
   const handleLoad = () => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || mapRef.current) return;
 
     window.kakao.maps.load(() => {
       const center = new window.kakao.maps.LatLng(37.5665, 126.978);
@@ -111,7 +97,7 @@ function MapSection({
     const latitude = center.getLat();
     const longitude = center.getLng();
 
-    onSearchCenterChange(latitude, longitude);
+    setSearchCenter({ latitude, longitude });
     setIsSelectingLocation(false);
   };
 
@@ -148,11 +134,7 @@ function MapSection({
 
     const currentPosition = new window.kakao.maps.LatLng(latitude, longitude);
 
-    mapRef.current.setCenter(currentPosition);
-
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-    }
+    if (markerRef.current) markerRef.current.setMap(null);
 
     const marker = createCurrentLocationMarker();
 
@@ -182,9 +164,9 @@ function MapSection({
     radiusCircleRef.current = new window.kakao.maps.Circle({
       center: currentPosition,
       radius,
-      strokeWeight: 2,
-      strokeColor: "#3B82F6",
-      strokeOpacity: 0.8,
+      strokeWeight: 3,
+      strokeColor: "#B5616E",
+      strokeOpacity: 1,
       fillOpacity: 0,
     });
 
@@ -200,7 +182,6 @@ function MapSection({
     }
 
     if (searchLatitude === null || searchLongitude === null) return;
-
     if (searchLatitude === latitude && searchLongitude === longitude) {
       searchPinRef.current?.setMap(null);
       return;
@@ -251,27 +232,37 @@ function MapSection({
     mapRef.current.setCenter(searchPosition);
   }, [searchLatitude, searchLongitude, mapReady]);
 
+  useEffect(() => {
+    if (!mapReady || !mapContainerRef.current || !mapRef.current) return;
+
+    const map = mapRef.current;
+    const observer = new ResizeObserver(() => {
+      map.relayout();
+    });
+
+    observer.observe(mapContainerRef.current);
+    return () => observer.disconnect();
+  }, [mapReady]);
+
   return (
-    <section>
+    <section className="min-w-0 lg:h-full">
       <Script
         src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
         strategy="afterInteractive"
-        onLoad={handleLoad}
+        onReady={handleLoad}
       />
-      <div className="relative">
-        <div ref={mapContainerRef} className="h-96 w-full" />
+      <div className="relative lg:h-full">
+        <div ref={mapContainerRef} className="h-96 w-full lg:h-full" />
 
         {isSelectingLocation && (
-          <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-full">
-            <svg width="36" height="48" viewBox="0 0 24 36" aria-hidden="true">
-              <path
-                d="M12 1C5.9 1 1 5.9 1 12c0 9 11 22 11 22s11-13 11-22C23 5.9 18.1 1 12 1Z"
-                fill="#ef4444"
-                stroke="white"
-                strokeWidth="1.5"
-              />
-              <circle cx="12" cy="12" r="4" fill="white" />
-            </svg>
+          <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 z-20 -translate-x-1/2 -translate-y-full">
+            <img
+              src="/select-location-pin.svg"
+              width={36}
+              height={48}
+              alt=""
+              aria-hidden="true"
+            />
           </div>
         )}
 
@@ -281,7 +272,7 @@ function MapSection({
               type="button"
               onClick={handleReturnCurrentLocation}
               disabled={latitude === null || longitude === null}
-              className="whitespace-nowrap rounded-full bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50"
+              className="whitespace-nowrap rounded-full bg-[#B5616E] px-5 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-[#9D5360] disabled:opacity-50"
             >
               내 위치로
             </button>
@@ -290,7 +281,7 @@ function MapSection({
                 <button
                   type="button"
                   onClick={handleStartSelecting}
-                  className="whitespace-nowrap rounded-full bg-white px-5 py-3 font-semibold text-gray-800 shadow-lg hover:bg-gray-100"
+                  className="whitespace-nowrap rounded-full border border-[#D9B1B6] bg-white px-5 py-3 font-semibold text-[#9D5360] shadow-lg transition-colors hover:bg-[#F8EFF0]"
                 >
                   검색 위치 지정
                 </button>
@@ -298,7 +289,7 @@ function MapSection({
                   <button
                     type="button"
                     onClick={handleReturnToSearchLocation}
-                    className="whitespace-nowrap rounded-full bg-green-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-green-700"
+                    className="whitespace-nowrap rounded-full border border-[#E8D3D7] bg-[#F8EFF0] px-5 py-3 font-semibold text-[#783E50] shadow-lg transition-colors hover:bg-[#EEDDE0]"
                   >
                     검색 위치로 돌아가기
                   </button>
@@ -309,7 +300,7 @@ function MapSection({
                 <button
                   type="button"
                   onClick={handleConfirmLocation}
-                  className="whitespace-nowrap rounded-full bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700"
+                  className="whitespace-nowrap rounded-full bg-[#B5616E] px-5 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-[#9D5360]"
                 >
                   이 위치에서 검색
                 </button>
@@ -317,7 +308,7 @@ function MapSection({
                 <button
                   type="button"
                   onClick={handleCancelSelecting}
-                  className="whitespace-nowrap rounded-full bg-white px-4 py-3 font-semibold text-gray-700 shadow-lg hover:bg-gray-100"
+                  className="whitespace-nowrap rounded-full border border-[#DDD5D5] bg-white px-4 py-3 font-semibold text-[#685D60] shadow-lg transition-colors hover:bg-[#F4F1F1]"
                 >
                   취소
                 </button>
@@ -325,69 +316,6 @@ function MapSection({
             )}
           </div>
         )}
-      </div>
-      <div className="p-4">
-        <div className="mb-2 flex justify-between">
-          <span className="font-medium">검색 반경</span>
-          <span className="font-bold">
-            {radius >= 1000 ? `${(radius / 1000).toFixed(1)}km` : `${radius}m`}
-          </span>
-        </div>
-        <button
-          onClick={() => onSortChange("recommended")}
-          className={
-            sortOption === "recommended"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          추천순
-        </button>
-        <button
-          onClick={() => onSortChange("rating")}
-          className={
-            sortOption === "rating"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          평점순
-        </button>
-        <button
-          onClick={() => onSortChange("reviews")}
-          className={
-            sortOption === "reviews"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          리뷰 많은 순
-        </button>
-        <button
-          onClick={() => onSortChange("distance")}
-          className={
-            sortOption === "distance"
-              ? "rounded-full bg-blue-600 px-4 py-2 text-white"
-              : "rounded-full bg-gray-100 px-4 py-2 text-gray-700"
-          }
-        >
-          가까운 순
-        </button>
-        <input
-          type="range"
-          min={100}
-          max={5000}
-          step={100}
-          value={radius}
-          onChange={(e) => {
-            onRadiusChange(Number(e.target.value));
-          }}
-          className="w-full accent-blue-600"
-        />
-        <div className="mt-1 flex justify-between text-sm text-gray-500">
-          <span>100m</span>
-          <span>5km</span>
-        </div>
       </div>
     </section>
   );
