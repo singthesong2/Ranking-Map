@@ -59,15 +59,6 @@ function MapSection({
   });
 
   const radius = useMapStore((state) => state.radius);
-  const setRadius = useMapStore((state) => state.setRadius);
-
-  const isCustomSearch =
-    latitude !== null &&
-    longitude !== null &&
-    searchLatitude !== null &&
-    searchLongitude !== null &&
-    (searchLatitude !== latitude || searchLongitude !== longitude);
-
   const createCurrentLocationMarker = () => {
     const marker = document.createElement("div");
     marker.className =
@@ -265,15 +256,13 @@ function MapSection({
 
         {isSelectingLocation && (
           <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 z-20 -translate-x-1/2 -translate-y-full">
-            <svg width="36" height="48" viewBox="0 0 24 36" aria-hidden="true">
-              <path
-                d="M12 1C5.9 1 1 5.9 1 12c0 9 11 22 11 22s11-13 11-22C23 5.9 18.1 1 12 1Z"
-                fill="#ef4444"
-                stroke="white"
-                strokeWidth="1.5"
-              />
-              <circle cx="12" cy="12" r="4" fill="white" />
-            </svg>
+            <img
+              src="/select-location-pin.svg"
+              width={36}
+              height={48}
+              alt=""
+              aria-hidden="true"
+            />
           </div>
         )}
 
@@ -283,7 +272,7 @@ function MapSection({
               type="button"
               onClick={handleReturnCurrentLocation}
               disabled={latitude === null || longitude === null}
-              className="whitespace-nowrap rounded-full bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700 disabled:opacity-50"
+              className="whitespace-nowrap rounded-full bg-[#B5616E] px-5 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-[#9D5360] disabled:opacity-50"
             >
               내 위치로
             </button>
@@ -292,7 +281,7 @@ function MapSection({
                 <button
                   type="button"
                   onClick={handleStartSelecting}
-                  className="whitespace-nowrap rounded-full bg-white px-5 py-3 font-semibold text-gray-800 shadow-lg hover:bg-gray-100"
+                  className="whitespace-nowrap rounded-full border border-[#D9B1B6] bg-white px-5 py-3 font-semibold text-[#9D5360] shadow-lg transition-colors hover:bg-[#F8EFF0]"
                 >
                   검색 위치 지정
                 </button>
@@ -300,7 +289,7 @@ function MapSection({
                   <button
                     type="button"
                     onClick={handleReturnToSearchLocation}
-                    className="whitespace-nowrap rounded-full bg-green-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-green-700"
+                    className="whitespace-nowrap rounded-full border border-[#E8D3D7] bg-[#F8EFF0] px-5 py-3 font-semibold text-[#783E50] shadow-lg transition-colors hover:bg-[#EEDDE0]"
                   >
                     검색 위치로 돌아가기
                   </button>
@@ -311,7 +300,7 @@ function MapSection({
                 <button
                   type="button"
                   onClick={handleConfirmLocation}
-                  className="whitespace-nowrap rounded-full bg-blue-600 px-5 py-3 font-semibold text-white shadow-lg hover:bg-blue-700"
+                  className="whitespace-nowrap rounded-full bg-[#B5616E] px-5 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-[#9D5360]"
                 >
                   이 위치에서 검색
                 </button>
@@ -319,7 +308,7 @@ function MapSection({
                 <button
                   type="button"
                   onClick={handleCancelSelecting}
-                  className="whitespace-nowrap rounded-full bg-white px-4 py-3 font-semibold text-gray-700 shadow-lg hover:bg-gray-100"
+                  className="whitespace-nowrap rounded-full border border-[#DDD5D5] bg-white px-4 py-3 font-semibold text-[#685D60] shadow-lg transition-colors hover:bg-[#F4F1F1]"
                 >
                   취소
                 </button>

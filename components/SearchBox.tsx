@@ -116,7 +116,6 @@ function SearchBox({
   const setRestaurantResultsOpen = useMapStore(
     (state) => state.setRestaurantResultsOpen,
   );
-  const setRadius = useMapStore((state) => state.setRadius);
   const addHistory = useSearchHistoryStore((state) => state.addHistory);
   const clearHistoryByMode = useSearchHistoryStore(
     (state) => state.clearHistoryByMode,
@@ -310,6 +309,11 @@ function SearchBox({
       return;
     }
 
+    if (latitude === null || longitude === null) {
+      setSearchError("검색 위치를 확인할 수 없습니다.");
+      return;
+    }
+
     requestIdRef.current++;
     submittedKeywordRef.current = "";
     setSearchMode("restaurant");
@@ -320,11 +324,6 @@ function SearchBox({
     setSearching(false);
     setSearchError("");
     setShowHistory(false);
-    setSearchCenter({
-      latitude: item.latitude,
-      longitude: item.longitude,
-    });
-    setRadius(item.radius);
     setManualRestaurantKeyword(item.label);
     setRestaurantResultsOpen(true);
     onRestaurantMapSelect(null);
