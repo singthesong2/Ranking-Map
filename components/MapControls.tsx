@@ -24,44 +24,44 @@ function MapControls({ sortOption, onSortChange }: MapControlsProps) {
         <button
           type="button"
           onClick={() => onSortChange("recommended")}
-          className={
+          className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors ${
             sortOption === "recommended"
-              ? "rounded-full bg-[#B5616E] px-4 py-2 text-white hover:bg-[#9D5360]"
-              : "rounded-full bg-[#F8EFF0] px-4 py-2 text-[#685D60] hover:bg-[#F3E1E5]"
-          }
+              ? "bg-[#B5616E] text-white hover:bg-[#9D5360]"
+              : "bg-[#F8EFF0] text-[#685D60] hover:bg-[#F3E1E5]"
+          }`}
         >
           추천순
         </button>
         <button
           type="button"
           onClick={() => onSortChange("rating")}
-          className={
+          className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors ${
             sortOption === "rating"
-              ? "rounded-full bg-[#B5616E] px-4 py-2 text-white hover:bg-[#9D5360]"
-              : "rounded-full bg-[#F8EFF0] px-4 py-2 text-[#685D60] hover:bg-[#F3E1E5]"
-          }
+              ? "bg-[#B5616E] text-white hover:bg-[#9D5360]"
+              : "bg-[#F8EFF0] text-[#685D60] hover:bg-[#F3E1E5]"
+          }`}
         >
           평점순
         </button>
         <button
           type="button"
           onClick={() => onSortChange("reviews")}
-          className={
+          className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors ${
             sortOption === "reviews"
-              ? "rounded-full bg-[#B5616E] px-4 py-2 text-white hover:bg-[#9D5360]"
-              : "rounded-full bg-[#F8EFF0] px-4 py-2 text-[#685D60] hover:bg-[#F3E1E5]"
-          }
+              ? "bg-[#B5616E] text-white hover:bg-[#9D5360]"
+              : "bg-[#F8EFF0] text-[#685D60] hover:bg-[#F3E1E5]"
+          }`}
         >
           리뷰 많은 순
         </button>
         <button
           type="button"
           onClick={() => onSortChange("distance")}
-          className={
+          className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors ${
             sortOption === "distance"
-              ? "rounded-full bg-[#B5616E] px-4 py-2 text-white hover:bg-[#9D5360]"
-              : "rounded-full bg-[#F8EFF0] px-4 py-2 text-[#685D60] hover:bg-[#F3E1E5]"
-          }
+              ? "bg-[#B5616E] text-white hover:bg-[#9D5360]"
+              : "bg-[#F8EFF0] text-[#685D60] hover:bg-[#F3E1E5]"
+          }`}
         >
           가까운 순
         </button>
