@@ -199,7 +199,7 @@ function Home() {
             />
           </div>
         </div>
-        <div className="order-3 min-w-0 lg:order-none lg:min-h-0">
+        <div className="order-3 mt-3 min-w-0 px-4 pb-4 lg:order-none lg:mt-0 lg:min-h-0 lg:px-0 lg:pb-0">
           <MapSection
             latitude={latitude}
             longitude={longitude}
