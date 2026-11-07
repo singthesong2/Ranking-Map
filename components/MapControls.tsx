@@ -20,7 +20,7 @@ function MapControls({ sortOption, onSortChange }: MapControlsProps) {
           {radius >= 1000 ? `${(radius / 1000).toFixed(1)}km` : `${radius}m`}
         </span>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex w-full min-w-0 flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:overflow-visible">
         <button
           type="button"
           onClick={() => onSortChange("recommended")}
