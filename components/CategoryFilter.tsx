@@ -32,7 +32,7 @@ function CategoryFilter({
   onChangeCategory,
 }: CategoryFilterProps) {
   return (
-    <section className="flex flex-wrap gap-2 p-4 lg:gap-2.5 lg:p-0">
+    <section className="flex flex-nowrap gap-2 overflow-x-auto overscroll-x-contain p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:overflow-visible lg:gap-2.5 lg:p-0">
       <h2 className="hidden w-full pb-1 text-sm font-semibold text-[#514649] lg:block">
         음식 종류
       </h2>
@@ -40,10 +40,10 @@ function CategoryFilter({
         <button
           key={category.value}
           onClick={() => onChangeCategory(category.value)}
-          className={`rounded-full px-4 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B5616E] lg:border lg:px-3.5 lg:py-2 lg:text-sm lg:font-medium ${
+          className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B5616E] lg:border lg:px-3.5 lg:py-2 lg:text-sm lg:font-medium ${
             selectedCategory === category.value
-              ? "bg-blue-600 text-white lg:border-[#B5616E] lg:bg-[#B5616E] lg:text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200 lg:border-[#EFE7E7] lg:bg-[#F8F5F4] lg:text-[#685D60] lg:hover:border-[#D7BABE] lg:hover:bg-[#F5ECEE]"
+              ? "bg-[#B5616E] text-white lg:border-[#B5616E]"
+              : "bg-[#F8EFF0] text-[#685D60] hover:bg-[#F3E1E5] lg:border-[#EFE7E7] lg:hover:border-[#D7BABE]"
           }`}
         >
           {category.label}
