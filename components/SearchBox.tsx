@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { FormEvent, KeyboardEvent } from "react";
+import type { FormEvent, KeyboardEvent, PointerEvent } from "react";
 import useDebounce from "@/hooks/useDebounce";
 import { normalize, removeRegionSuffix } from "@/utils/regionSearch";
 import type { Restaurant } from "@/types/restaurant";
@@ -108,6 +108,7 @@ function SearchBox({
   const requestIdRef = useRef(0);
   const submittedKeywordRef = useRef("");
   const historyAreaRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const radius = useMapStore((state) => state.radius);
   const restaurantResultsOpen = useMapStore(
@@ -163,10 +164,20 @@ function SearchBox({
   };
   const setSearchCenter = useMapStore((state) => state.setSearchCenter);
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") {
-      setShowHistory(false);
+    if (event.key === "Escape") setShowHistory(false);
+  };
+
+  const blurSearchInput = () => {
+    if (document.activeElement === searchInputRef.current)
+      searchInputRef.current?.blur();
+  };
+
+  const handleResultsPointerEnter = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse") {
+      blurSearchInput();
     }
   };
+
   const handleRequestClearHistory = () => {
     setShowHistory(false);
     setDeleteHistoryModalOpen(true);
@@ -434,6 +445,26 @@ function SearchBox({
     void handleSearch();
   };
 
+  const saveRestaurantSearchHistory = () => {
+    if (latitude === null || longitude === null) return;
+
+    const query = restaurantSearchKeyword.trim();
+    if (!query) return;
+
+    addHistory({
+      kind: "restaurant",
+      label: query,
+      latitude,
+      longitude,
+      radius,
+    });
+  };
+
+  const handleRestaurantMapSelect = (restaurant: Restaurant) => {
+    onRestaurantMapSelect(restaurant);
+    saveRestaurantSearchHistory();
+  };
+
   const restaurantsWithDistance = restaurantResults
     .map((restaurant) => ({
       restaurant,
@@ -500,6 +531,7 @@ function SearchBox({
         <div ref={historyAreaRef} className="relative">
           <form onSubmit={handleFormSubmit} className="flex gap-2">
             <input
+              ref={searchInputRef}
               type="search"
               value={keyword}
               onFocus={handleFocusSearch}
@@ -621,7 +653,11 @@ function SearchBox({
               !restaurantSearchError &&
               restaurantSearchKeyword !== "" &&
               restaurantResultsOpen && (
-                <div className="mt-3 space-y-3">
+                <div
+                  className="mt-3 space-y-3"
+                  onPointerEnter={handleResultsPointerEnter}
+                  onPointerDownCapture={blurSearchInput}
+                >
                   {restaurantResults.length === 0 ? (
                     <p className="text-sm text-gray-500">
                       {hasNextPage
@@ -642,6 +678,35 @@ function SearchBox({
                       {nearbyRestaurants.map(({ restaurant, distance }) => (
                         <div
                           key={restaurant.id}
+                          onMouseEnter={(event) => {
+                            if (
+                              restaurant.displayName.text !==
+                              "오밀 홍대 레스토랑"
+                            )
+                              return;
+
+                            const card = event.currentTarget;
+                            const beforeTop = card.getBoundingClientRect().top;
+                            const beforeScrollY = window.scrollY;
+
+                            const panel = card.closest<HTMLElement>(
+                              '[class*="overflow-y-auto"]',
+                            );
+                            const beforePanelScroll = panel?.scrollTop;
+
+                            setTimeout(() => {
+                              console.log("[같은 카드 위치 비교]", {
+                                name: restaurant.displayName.text,
+                                beforeTop,
+                                afterTop: card.getBoundingClientRect().top,
+                                isConnected: card.isConnected,
+                                beforeScrollY,
+                                afterScrollY: window.scrollY,
+                                beforePanelScroll,
+                                afterPanelScroll: panel?.scrollTop,
+                              });
+                            }, 1000);
+                          }}
                           className="overflow-hidden rounded-lg border border-gray-200 lg:rounded-2xl lg:border-[#EEE6E4] lg:bg-white lg:shadow-[0_4px_16px_rgba(70,40,40,0.04)]"
                         >
                           <div className="flex items-center gap-3 transition-colors hover:bg-[#FFFBFB] focus-within:bg-[#FFFBFB]">
@@ -649,6 +714,7 @@ function SearchBox({
                               href={restaurant.googleMapsUri}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={saveRestaurantSearchHistory}
                               className="min-w-0 flex-1 p-3 transition-colors hover:bg-gray-50"
                             >
                               <p className="font-semibold lg:text-sm lg:font-semibold lg:text-[#3A3032]">
@@ -670,7 +736,9 @@ function SearchBox({
                           </div>
                           <button
                             type="button"
-                            onClick={() => onRestaurantMapSelect(restaurant)}
+                            onClick={() =>
+                              handleRestaurantMapSelect(restaurant)
+                            }
                             className="w-full border-t border-[#F0E8E6] px-3 py-2 text-sm font-medium text-[#B5616E] transition-colors hover:bg-[#F8EFF0] hover:text-[#9D5360] focus-visible:outline-2 focus-visible:outline-[#B5616E] lg:py-2.5 lg:text-xs"
                           >
                             지도에서 보기
@@ -686,6 +754,37 @@ function SearchBox({
                             ({ restaurant, distance }) => (
                               <div
                                 key={restaurant.id}
+                                onMouseEnter={(event) => {
+                                  if (
+                                    restaurant.displayName.text !==
+                                    "오밀 홍대 레스토랑"
+                                  )
+                                    return;
+
+                                  const card = event.currentTarget;
+                                  const beforeTop =
+                                    card.getBoundingClientRect().top;
+                                  const beforeScrollY = window.scrollY;
+
+                                  const panel = card.closest<HTMLElement>(
+                                    '[class*="overflow-y-auto"]',
+                                  );
+                                  const beforePanelScroll = panel?.scrollTop;
+
+                                  setTimeout(() => {
+                                    console.log("[같은 카드 위치 비교]", {
+                                      name: restaurant.displayName.text,
+                                      beforeTop,
+                                      afterTop:
+                                        card.getBoundingClientRect().top,
+                                      isConnected: card.isConnected,
+                                      beforeScrollY,
+                                      afterScrollY: window.scrollY,
+                                      beforePanelScroll,
+                                      afterPanelScroll: panel?.scrollTop,
+                                    });
+                                  }, 1000);
+                                }}
                                 className="overflow-hidden rounded-lg border border-gray-200 lg:rounded-2xl lg:border-[#EEE6E4] lg:bg-white lg:shadow-[0_4px_16px_rgba(70,40,40,0.04)]"
                               >
                                 <div className="flex items-center gap-3 transition-colors hover:bg-[#FFFBFB] focus-within:bg-[#FFFBFB]">
@@ -693,6 +792,7 @@ function SearchBox({
                                     href={restaurant.googleMapsUri}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={saveRestaurantSearchHistory}
                                     className="min-w-0 flex-1 p-3 lg:p-4"
                                   >
                                     <p className="font-semibold lg:text-sm lg:font-semibold lg:text-[#3A3032]">
@@ -712,7 +812,7 @@ function SearchBox({
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    onRestaurantMapSelect(restaurant)
+                                    handleRestaurantMapSelect(restaurant)
                                   }
                                   className="w-full border-t border-[#F0E8E6] px-3 py-2 text-sm font-medium text-[#B5616E] transition-colors hover:bg-[#F8EFF0] hover:text-[#9D5360] focus-visible:outline-2 focus-visible:outline-[#B5616E] lg:py-2.5 lg:text-xs"
                                 >
