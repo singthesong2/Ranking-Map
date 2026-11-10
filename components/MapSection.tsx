@@ -261,8 +261,8 @@ function MapSection({
           <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 z-20 -translate-x-1/2 -translate-y-full">
             <img
               src="/select-location-pin.svg"
-              width={36}
-              height={48}
+              width={40}
+              height={51}
               alt=""
               aria-hidden="true"
             />
