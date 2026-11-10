@@ -80,16 +80,9 @@ export default function FavoritesPanel({
     };
   }, [isOpen, isDeleteModalOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const handleRemoveFavorite = (id: string, restaurantName?: string) => {
     removeFavorite(id);
-    showToast(
-      restaurantName
-        ? `${restaurantName} 찜을 해제했어요.`
-        : "찜을 해제했어요.",
-      "success",
-    );
+    showToast(`${restaurantName} 찜을 해제했어요.`, "success");
   };
 
   return (
@@ -98,13 +91,24 @@ export default function FavoritesPanel({
         type="button"
         onClick={onClose}
         aria-label="찜 목록 닫기"
-        className="fixed inset-0 z-40 bg-black/40"
+        aria-hidden={!isOpen}
+        inert={!isOpen}
+        className={`fixed inset-0 z-40 bg-black/40
+    transition-opacity duration-400 ease-in-out
+    motion-reduce:transition-none
+    ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
       />
       <aside
         role="dialog"
-        aria-modal="true"
+        aria-modal={isOpen}
         aria-label="찜한 맛집 목록"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-xl"
+        aria-hidden={!isOpen}
+        inert={!isOpen}
+        className={`fixed inset-y-0 right-0 z-50
+    flex w-full max-w-md flex-col bg-white shadow-xl
+    transition-transform duration-400 ease-in-out
+    motion-reduce:transition-none
+    ${isOpen ? "translate-x-0" : "pointer-events-none translate-x-full"}`}
       >
         <div className="flex items-center justify-between border-b border-gray-200 p-5">
           <div>
