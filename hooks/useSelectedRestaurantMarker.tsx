@@ -132,11 +132,11 @@ export function useSelectedRestaurantMarker({
     window.kakao.maps.event.addListener(marker, "click", handleClick);
 
     map.panTo(position);
-    /*
+
     mapContainerRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "center",
-    });*/
+    });
 
     return () => {
       window.kakao.maps.event.removeListener(
