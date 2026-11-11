@@ -9,6 +9,8 @@ import {
 
 const MAX_SEARCH_HISTORY = 20;
 
+type SearchKind = SearchHistoryItem["kind"];
+
 interface SearchHistoryStore {
   history: SearchHistoryItem[];
   addHistory: (entry: NewSearchHistory) => void;
@@ -17,11 +19,11 @@ interface SearchHistoryStore {
   clearHistory: () => void;
 }
 
-function makeHistoryId(entry: NewSearchHistory): string {
+function makeHistoryId(entry: NewSearchHistory | SearchHistoryItem): string {
   if (entry.kind === "region")
     return `region:${entry.latitude.toFixed(6)}:${entry.longitude.toFixed(6)}`;
 
-  return `restaurant:${entry.label.trim().toLocaleLowerCase()}:${entry.latitude.toFixed(6)}:${entry.longitude.toFixed(6)}:${entry.radius}`;
+  return `restaurant:${entry.label.trim().toLocaleLowerCase()}`;
 }
 
 export const useSearchHistoryStore = create<SearchHistoryStore>()(
@@ -48,7 +50,7 @@ export const useSearchHistoryStore = create<SearchHistoryStore>()(
           return {
             history: [
               item,
-              ...state.history.filter((saved) => saved.id !== id),
+              ...state.history.filter((saved) => makeHistoryId(saved) !== id),
             ].slice(0, MAX_SEARCH_HISTORY),
           };
         }),
@@ -73,9 +75,24 @@ export const useSearchHistoryStore = create<SearchHistoryStore>()(
       skipHydration: true,
       merge: (persistedState, currentState) => {
         const parsed = savedSearchHistorySchema.safeParse(persistedState);
+
+        if (!parsed.success) return { ...currentState, history: [] };
+
+        const seen = new Set<string>();
+        const history = parsed.data.history
+          .map((item) => ({
+            ...item,
+            id: makeHistoryId(item),
+          }))
+          .filter((item) => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          });
+
         return {
           ...currentState,
-          history: parsed.success ? parsed.data.history : [],
+          history,
         };
       },
     },

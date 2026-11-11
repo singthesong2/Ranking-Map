@@ -102,7 +102,7 @@ export default function SearchHistoryList({
             type="button"
             onClick={onRequestClearAll}
             className="flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600"
-            title="지역·음식점 검색 기록 모두 삭제"
+            title={`${mode === "region" ? "지역" : "음식점"} 검색 기록 모두 삭제`}
           >
             <IconTrash size={15} />
             전체 삭제
