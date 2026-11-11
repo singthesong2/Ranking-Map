@@ -15,6 +15,7 @@ import { useSearchHistoryStore } from "@/stores/useSearchHistoryStore";
 import type { SearchHistoryItem } from "@/schemas/searchHistorySchema";
 import FavoriteButton from "@/components/FavoriteButton";
 import SearchHistoryList from "@/components/SearchHistoryList";
+import RestaurantSearchSkeleton from "@/components/RestaurantSearchSkeleton";
 import ConfirmModal from "@/components/ConfirmModal";
 
 type SearchMode = "region" | "restaurant";
@@ -157,6 +158,13 @@ function SearchBox({
   });
   const restaurantSearchError = restaurantIsError && !isFetchNextPageError;
   const loadMoreError = isFetchNextPageError ? "추가 검색에 실패했습니다." : "";
+  const showRestaurantSkeleton =
+    restaurantResultsOpen &&
+    restaurantSearchKeyword !== "" &&
+    !restaurantSearchError &&
+    isFetching &&
+    !loadingMore &&
+    restaurantResults.length === 0;
   const resultKeyword =
     searchMode === "region" ? previewKeyword : restaurantSearchKeyword;
   const handleFocusSearch = () => {
@@ -637,9 +645,7 @@ function SearchBox({
         )}
         {searchMode === "restaurant" && (
           <div className="space-y-3">
-            {restaurantSearching && (
-              <p className="mt-3 text-sm text-gray-500">음식점 검색 중...</p>
-            )}
+            {showRestaurantSkeleton && <RestaurantSearchSkeleton />}
             {searchError && (
               <p className="mt-3 text-sm text-red-500">{searchError}</p>
             )}
@@ -648,7 +654,7 @@ function SearchBox({
                 음식점 검색에 실패했습니다.
               </p>
             )}
-            {!restaurantSearching &&
+            {!showRestaurantSkeleton &&
               !searchError &&
               !restaurantSearchError &&
               restaurantSearchKeyword !== "" &&

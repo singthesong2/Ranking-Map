@@ -10,6 +10,7 @@ import {
 import { useFavoritesStore } from "@/stores/useFavoritesStore";
 import { useQueries } from "@tanstack/react-query";
 import type { Restaurant } from "@/types/restaurant";
+import FavoriteDetailsSkeleton from "@/components/FavoriteDetailsSkeleton";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToastStore } from "@/stores/useToastStore";
 
@@ -147,34 +148,38 @@ export default function FavoritesPanel({
                 <div key={id} className="rounded-xl border border-gray-200 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold">
-                        {restaurant
-                          ? restaurant.displayName.text
-                          : detailsQuery.isPending
-                            ? "음식점 정보 불러오는 중..."
-                            : "음식점 정보 확인 불가"}
-                      </h3>
                       {restaurant ? (
-                        <p className="mt-1 text-sm text-gray-500">
-                          {restaurant.formattedAddress}
-                        </p>
-                      ) : detailsQuery.isError ? (
-                        <div className="mt-2">
-                          <p className="text-sm text-red-500">
-                            음식점 정보를 불러오지 못했습니다.
+                        <>
+                          <h3 className="font-semibold">
+                            {restaurant.displayName.text}
+                          </h3>
+
+                          <p className="mt-1 text-sm text-gray-500">
+                            {restaurant.formattedAddress}
                           </p>
-                          <button
-                            type="button"
-                            onClick={() => void detailsQuery.refetch()}
-                            className="mt-2 text-sm text-blue-600 hover:underline"
-                          >
-                            다시 시도
-                          </button>
-                        </div>
+                        </>
+                      ) : detailsQuery.isPending ? (
+                        <FavoriteDetailsSkeleton />
                       ) : (
-                        <p className="mt-1 text-sm text-gray-500">
-                          음식점 정보를 불러오는 중입니다.
-                        </p>
+                        <>
+                          <h3 className="font-semibold">
+                            음식점 정보 확인 불가
+                          </h3>
+                          {detailsQuery.isError && (
+                            <div className="mt-2">
+                              <p className="text-sm text-red-500">
+                                음식점 정보를 불러오지 못했습니다.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => void detailsQuery.refetch()}
+                                className="mt-2 text-sm text-blue-600 hover:underline"
+                              >
+                                다시 시도
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                     <button

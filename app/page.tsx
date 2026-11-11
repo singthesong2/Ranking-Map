@@ -24,6 +24,7 @@ function Home() {
     useState<RestaurantCategory>("all");
   const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
   const [visibleCount, setVisibleCount] = useState(10);
+  const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
   const radius = useMapStore((state) => state.radius);
   const setRadius = useMapStore((state) => state.setRadius);
   const setRestaurantResultsOpen = useMapStore(
@@ -34,6 +35,7 @@ function Home() {
     latitude,
     longitude,
     loading: locationLoading,
+    error: locationError,
   } = useCurrentlocation();
   const searchCenter = useMapStore((state) => state.searchCenter);
   const setSearchCenter = useMapStore((state) => state.setSearchCenter);
@@ -50,6 +52,28 @@ function Home() {
   });
 
   const showToast = useToastStore((state) => state.showToast);
+
+  const waitingForLocation = !searchCenter && locationLoading;
+
+  const waitingForRadius =
+    centerLatitude !== null &&
+    centerLongitude !== null &&
+    radius !== debouncedRadius;
+
+  const rankingLoading = loading || waitingForRadius;
+
+  const rankingError =
+    centerLatitude === null || centerLongitude === null ? locationError : error;
+
+  useEffect(() => {
+    if (hasFinishedInitialLoad) return;
+
+    if (waitingForLocation || waitingForRadius || loading) {
+      return;
+    }
+
+    setHasFinishedInitialLoad(true);
+  }, [hasFinishedInitialLoad, waitingForLocation, waitingForRadius, loading]);
 
   const handleResetLocation = () => {
     setSearchCenter(null);
@@ -168,10 +192,7 @@ function Home() {
     if (shared.sort !== undefined) setSortOption(shared.sort);
   }, [setSearchCenter, setRadius]);
 
-  const isPageLoading =
-    (locationLoading && !searchCenter) || (loading && restaurants.length === 0);
-
-  if (isPageLoading) {
+  if (!hasFinishedInitialLoad) {
     return <FullPageLoading />;
   }
 
@@ -208,6 +229,8 @@ function Home() {
               onLoadMore={() => {
                 setVisibleCount((prev) => prev + 10);
               }}
+              loading={rankingLoading}
+              error={rankingError}
             />
           </div>
         </div>
