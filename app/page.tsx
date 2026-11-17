@@ -163,7 +163,6 @@ function Home() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "맛집 랭킹",
           url: shareUrl,
         });
         return;
