@@ -164,7 +164,6 @@ function Home() {
       if (navigator.share) {
         await navigator.share({
           title: "맛집 랭킹",
-          text: "내가 검색한 맛집을 확인해 봐!",
           url: shareUrl,
         });
         return;
