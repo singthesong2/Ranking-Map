@@ -547,9 +547,7 @@ function SearchBox({
               onKeyDown={handleSearchKeyDown}
               onChange={(e) => handleKeywordChange(e.target.value)}
               placeholder={
-                searchMode === "region"
-                  ? "예: 강남역, 홍대입구, 신림동"
-                  : "예: 맥도날드, 강강술래, 프랭크버거"
+                searchMode === "region" ? "예시: 강남역" : "예시: 맥도날드"
               }
               className="min-w-0 flex-1 rounded-full border border-gray-300 px-5 py-3 outline-none focus:border-blue-500 lg:h-12 lg:rounded-2xl lg:border-[#E7DEDD] lg:bg-[#FCFAF9] lg:px-4 lg:text-sm lg:text-[#302B2D] lg:placeholder:text-[#9F9495] lg:focus:border-[#B5616E] lg:focus:ring-4 lg:focus:ring-[#B5616E]/10"
             />
