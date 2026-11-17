@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Providers from "./providers";
-import { siteUrl } from "@/utils/siteUrl";
 
 const title = "맛집 랭킹 | 내 주변 맛집 찾기";
 const description = "내 주변과 원하는 지역의 음식점을 검색하고 비교해 보세요.";
