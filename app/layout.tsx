@@ -4,8 +4,7 @@ import Providers from "./providers";
 import { siteUrl } from "@/utils/siteUrl";
 
 const title = "맛집 랭킹 | 내 주변 맛집 찾기";
-const description =
-  "내 주변과 원하는 지역의 음식점을 검색하고, 평점과 리뷰를 비교해 보세요. 지도 검색, 카테고리 필터, 찜 기능을 제공합니다.";
+const description = "내 주변과 원하는 지역의 음식점을 검색하고 비교해 보세요.";
 
 export const metadata: Metadata = {
   title: "Ranking Map",
