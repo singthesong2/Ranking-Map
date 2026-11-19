@@ -71,7 +71,6 @@ export async function GET(request: NextRequest) {
           typeof place.formattedAddress === "string"
             ? place.formattedAddress
             : "",
-
         location: {
           latitude: place.location.latitude,
           longitude: place.location.longitude,

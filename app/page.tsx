@@ -14,10 +14,10 @@ import type { RestaurantCategory, RestaurantSort } from "@/types/restaurant";
 import { calculateDistance } from "@/utils/calculateDistance";
 import { classifyRestaurant } from "@/utils/restaurantClassifier";
 import { useMapStore } from "@/stores/useMapStore";
-import { createShareUrl } from "@/utils/shareSearch";
-import { readShareSearch } from "@/utils/shareSearch";
+import { createShareUrl, readShareSearch } from "@/utils/shareSearch";
 import { useToastStore } from "@/stores/useToastStore";
 import FullPageLoading from "@/components/FullPageLoading";
+import LocationPermissionNotice from "@/components/LocationPermissionNotice";
 
 function Home() {
   const [selectedCategory, setSelectedCategory] =
@@ -35,7 +35,7 @@ function Home() {
     latitude,
     longitude,
     loading: locationLoading,
-    error: locationError,
+    errorType: locationErrorType,
   } = useCurrentlocation();
   const searchCenter = useMapStore((state) => state.searchCenter);
   const setSearchCenter = useMapStore((state) => state.setSearchCenter);
@@ -44,6 +44,7 @@ function Home() {
   );
   const centerLatitude = searchCenter?.latitude ?? latitude;
   const centerLongitude = searchCenter?.longitude ?? longitude;
+  const hasSearchPosition = centerLatitude !== null && centerLongitude !== null;
   const { restaurants, loading, error } = useRestaurants({
     latitude: centerLatitude,
     longitude: centerLongitude,
@@ -62,8 +63,8 @@ function Home() {
 
   const rankingLoading = loading || waitingForRadius;
 
-  const rankingError =
-    centerLatitude === null || centerLongitude === null ? locationError : error;
+  const showLocationPermissionNotice =
+    locationErrorType === "permission_denied" && !hasSearchPosition;
 
   useEffect(() => {
     if (hasFinishedInitialLoad) return;
@@ -208,6 +209,7 @@ function Home() {
                 setRestaurantResultsOpen(restaurant === null);
               }}
             />
+            {showLocationPermissionNotice && <LocationPermissionNotice />}
           </div>
           <div className="order-2 lg:bg-white lg:px-5 lg:py-4">
             <CategoryFilter
@@ -228,7 +230,7 @@ function Home() {
                 setVisibleCount((prev) => prev + 10);
               }}
               loading={rankingLoading}
-              error={rankingError}
+              error={error}
             />
           </div>
         </div>
