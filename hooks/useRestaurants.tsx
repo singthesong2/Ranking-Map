@@ -29,6 +29,7 @@ function useRestaurants({
     data,
     isFetching,
     error: queryError,
+    refetch,
   } = useQuery<Restaurant[]>({
     queryKey: ["restaurants", category, latKey, lngKey, radius],
 
@@ -62,6 +63,7 @@ function useRestaurants({
     enabled: latitude !== null && longitude !== null,
     staleTime: 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    retry: false,
   });
 
   const restaurants = useMemo(() => {
@@ -90,6 +92,7 @@ function useRestaurants({
     restaurants,
     loading: isFetching,
     error: queryError ? "맛집 정보를 불러오지 못했습니다." : null,
+    refetch,
   };
 }
 
