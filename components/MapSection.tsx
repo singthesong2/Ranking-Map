@@ -1,11 +1,12 @@
 "use client";
 
-import Script from "next/script";
 import { useEffect, useRef, useState } from "react";
 import type { Restaurant } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
 import { useMapStore } from "@/stores/useMapStore";
+import { useKakaoMapLoader } from "@/hooks/useKakaoMapLoader";
+import MapErrorState from "@/components/MapErrorState";
 
 interface MapSectionProps {
   latitude: number | null;
@@ -27,12 +28,14 @@ function MapSection({
   onResetLocation,
   restaurants,
   onReturnToSearchLocation,
-  loading,
-  error,
 }: MapSectionProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<kakao.maps.Map | null>(null);
-  const [mapReady, setMapReady] = useState(false);
+  const {
+    mapRef,
+    mapReady,
+    status: mapStatus,
+    retry: retryLoadMap,
+  } = useKakaoMapLoader(mapContainerRef);
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
   const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
@@ -65,23 +68,6 @@ function MapSection({
       "w-5 h-5 rounded-full bg-[#9D5360] border-4 border-white box-border";
 
     return marker;
-  };
-
-  const handleLoad = () => {
-    if (!mapContainerRef.current || mapRef.current) return;
-
-    window.kakao.maps.load(() => {
-      const center = new window.kakao.maps.LatLng(37.5665, 126.978);
-      const options = {
-        center,
-        level: 3,
-      };
-      mapRef.current = new window.kakao.maps.Map(
-        mapContainerRef.current!,
-        options,
-      );
-      setMapReady(true);
-    });
   };
 
   const handleStartSelecting = () => {
@@ -246,19 +232,30 @@ function MapSection({
 
   return (
     <section className="min-w-0 lg:h-full">
-      <Script
-        src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
-        strategy="afterInteractive"
-        onReady={handleLoad}
-      />
       <div className="relative lg:h-full">
         <div
           ref={mapContainerRef}
-          className="h-[48svh] min-h-[340px] w-full lg:h-full"
+          className={`h-[48svh] min-h-[340px] w-full lg:h-full ${
+            mapReady ? "" : "invisible"
+          }`}
         />
-
-        {isSelectingLocation && (
-          <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 z-20 -translate-x-1/2 -translate-y-full">
+        {mapStatus === "loading" && (
+          <div
+            role="status"
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[#FCF9F9]"
+          >
+            <span
+              aria-hidden="true"
+              className="h-9 w-9 animate-spin rounded-full border-[3px] border-[#EAD2D6] border-t-[#B5616E] motion-reduce:animate-none"
+            />
+            <p className="text-sm font-medium text-[#776C6F]">
+              지도를 불러오는 중...
+            </p>
+          </div>
+        )}
+        {mapStatus === "error" && <MapErrorState onRetry={retryLoadMap} />}
+        {isSelectingLocation && mapReady && (
+          <div className="pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-full">
             <img
               src="/select-location-pin.svg"
               width={40}
@@ -268,7 +265,6 @@ function MapSection({
             />
           </div>
         )}
-
         {mapReady && (
           <div className="absolute bottom-3 left-1/2 z-30 flex w-[calc(100%-24px)] -translate-x-1/2 flex-wrap justify-center gap-2 lg:bottom-4 lg:w-auto lg:max-w-[95%]">
             <button
@@ -288,7 +284,7 @@ function MapSection({
                 >
                   검색 위치 지정
                 </button>
-                {selectedRestaurant && !isSelectingLocation && (
+                {selectedRestaurant && (
                   <button
                     type="button"
                     onClick={handleReturnToSearchLocation}
@@ -307,7 +303,6 @@ function MapSection({
                 >
                   이 위치에서 검색
                 </button>
-
                 <button
                   type="button"
                   onClick={handleCancelSelecting}
