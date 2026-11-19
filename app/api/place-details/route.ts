@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const placeId = request.nextUrl.searchParams.get("id")?.trim();
@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     const response = await fetch(url, {
       headers: {
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "id,displayName,formattedAddress,googleMapsUri",
+        "X-Goog-FieldMask":
+          "id,displayName,formattedAddress,googleMapsUri,location",
       },
       cache: "no-store",
     });
@@ -42,9 +43,20 @@ export async function GET(request: NextRequest) {
 
     const place = await response.json();
 
-    if (!place.id || !place.displayName?.text) {
+    if (
+      typeof place?.id !== "string" ||
+      !place.id.trim() ||
+      typeof place?.displayName?.text !== "string" ||
+      !place.displayName.text.trim() ||
+      typeof place?.location?.latitude !== "number" ||
+      typeof place?.location?.longitude !== "number" ||
+      !Number.isFinite(place.location.latitude) ||
+      !Number.isFinite(place.location.longitude) ||
+      Math.abs(place.location.latitude) > 90 ||
+      Math.abs(place.location.longitude) > 180
+    ) {
       return NextResponse.json(
-        { error: "음식점 정보가 없습니다." },
+        { error: "음식점 정보 또는 위치 정보가 없습니다." },
         { status: 404 },
       );
     }
@@ -52,11 +64,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         id: place.id,
-        displayName: place.displayName,
-        formattedAddress: place.formattedAddress ?? "",
+        displayName: {
+          text: place.displayName.text,
+        },
+        formattedAddress:
+          typeof place.formattedAddress === "string"
+            ? place.formattedAddress
+            : "",
+
+        location: {
+          latitude: place.location.latitude,
+          longitude: place.location.longitude,
+        },
         googleMapsUri:
-          place.googleMapsUri ??
-          `https://www.google.com/maps/search/?api=1&query=restaurant&query_place_id=${encodeURIComponent(place.id)}`,
+          typeof place.googleMapsUri === "string"
+            ? place.googleMapsUri
+            : `https://www.google.com/maps/search/?api=1&query=restaurant&query_place_id=${encodeURIComponent(place.id)}`,
       },
       {
         headers: {

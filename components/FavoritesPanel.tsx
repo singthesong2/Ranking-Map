@@ -6,17 +6,19 @@ import {
   IconTrash,
   IconExternalLink,
   IconHeartFilled,
+  IconMapPin,
 } from "@tabler/icons-react";
-import { useFavoritesStore } from "@/stores/useFavoritesStore";
 import { useQueries } from "@tanstack/react-query";
 import type { Restaurant } from "@/types/restaurant";
+import { useFavoritesStore } from "@/stores/useFavoritesStore";
+import { useMapStore } from "@/stores/useMapStore";
+import { useToastStore } from "@/stores/useToastStore";
 import FavoriteDetailsSkeleton from "@/components/FavoriteDetailsSkeleton";
 import ConfirmModal from "@/components/ConfirmModal";
-import { useToastStore } from "@/stores/useToastStore";
 
 type FavoritePlaceDetails = Pick<
   Restaurant,
-  "id" | "displayName" | "formattedAddress" | "googleMapsUri"
+  "id" | "displayName" | "formattedAddress" | "googleMapsUri" | "location"
 >;
 
 interface FavoritesPanelProps {
@@ -32,9 +34,15 @@ export default function FavoritesPanel({
   const restaurantDetails = useFavoritesStore(
     (state) => state.restaurantDetails,
   );
-
   const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
   const clearFavorites = useFavoritesStore((state) => state.clearFavorites);
+  const setSelectedRestaurant = useMapStore(
+    (state) => state.setSelectedRestaurant,
+  );
+  const setRestaurantResultsOpen = useMapStore(
+    (state) => state.setRestaurantResultsOpen,
+  );
+  const showToast = useToastStore((state) => state.showToast);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const detailQueries = useQueries({
     queries: favoriteIds.map((id) => ({
@@ -54,17 +62,43 @@ export default function FavoritesPanel({
       enabled: isOpen && !restaurantDetails[id],
       staleTime: 5 * 60 * 1000,
       gcTime: 30 * 60 * 1000,
-
       retry: 1,
       refetchOnWindowFocus: false,
     })),
   });
 
-  const showToast = useToastStore((state) => state.showToast);
   const handleConfirmClear = () => {
     clearFavorites();
     setIsDeleteModalOpen(false);
     showToast("찜 목록을 모두 삭제했어요.", "success");
+  };
+
+  const handleRemoveFavorite = (id: string, restaurantName?: string) => {
+    removeFavorite(id);
+
+    showToast(
+      restaurantName
+        ? `${restaurantName} 찜을 해제했어요.`
+        : "찜을 해제했어요.",
+      "success",
+    );
+  };
+
+  const handleViewOnMap = (restaurant: FavoritePlaceDetails) => {
+    const { latitude, longitude } = restaurant.location;
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude) > 90 ||
+      Math.abs(longitude) > 180
+    ) {
+      showToast("음식점 위치 정보를 확인할 수 없어요.", "error");
+      return;
+    }
+    setSelectedRestaurant(restaurant);
+    setRestaurantResultsOpen(false);
+    onClose();
   };
 
   useEffect(() => {
@@ -75,16 +109,13 @@ export default function FavoritesPanel({
       if (isDeleteModalOpen) setIsDeleteModalOpen(false);
       else onClose();
     };
+
     window.addEventListener("keydown", handleKeyDown);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, isDeleteModalOpen, onClose]);
-
-  const handleRemoveFavorite = (id: string, restaurantName?: string) => {
-    removeFavorite(id);
-    showToast(`${restaurantName} 찜을 해제했어요.`, "success");
-  };
 
   return (
     <>
@@ -95,9 +126,9 @@ export default function FavoritesPanel({
         aria-hidden={!isOpen}
         inert={!isOpen}
         className={`fixed inset-0 z-40 bg-black/40
-    transition-opacity duration-400 ease-in-out
-    motion-reduce:transition-none
-    ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          transition-opacity duration-400 ease-in-out
+          motion-reduce:transition-none
+          ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
       />
       <aside
         role="dialog"
@@ -106,19 +137,19 @@ export default function FavoritesPanel({
         aria-hidden={!isOpen}
         inert={!isOpen}
         className={`fixed inset-y-0 right-0 z-50
-    flex w-full max-w-md flex-col bg-white shadow-xl
-    transition-transform duration-400 ease-in-out
-    motion-reduce:transition-none
-    ${isOpen ? "translate-x-0" : "pointer-events-none translate-x-full"}`}
+          flex w-full max-w-md flex-col bg-white shadow-xl
+          transition-transform duration-400 ease-in-out
+          motion-reduce:transition-none
+          ${isOpen ? "translate-x-0" : "pointer-events-none translate-x-full"}`}
       >
         <div className="flex items-center justify-between border-b border-gray-200 p-5">
           <div>
             <h2 className="text-xl font-bold">찜한 맛집</h2>
+
             <p className="mt-1 text-sm text-gray-500">
               총 {favoriteIds.length}개
             </p>
           </div>
-
           <button
             type="button"
             onClick={onClose}
@@ -128,7 +159,6 @@ export default function FavoritesPanel({
             <IconX size={24} />
           </button>
         </div>
-
         <div className="flex-1 space-y-3 overflow-y-auto p-5">
           {favoriteIds.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-gray-400">
@@ -153,7 +183,6 @@ export default function FavoritesPanel({
                           <h3 className="font-semibold">
                             {restaurant.displayName.text}
                           </h3>
-
                           <p className="mt-1 text-sm text-gray-500">
                             {restaurant.formattedAddress}
                           </p>
@@ -188,21 +217,34 @@ export default function FavoritesPanel({
                         handleRemoveFavorite(id, restaurant?.displayName.text)
                       }
                       aria-label="찜 해제"
-                      className="rounded-full p-2 text-red-500 hover:bg-red-50"
+                      className="group flex h-10 w-10 shrink-0 items-center justify-center bg-transparent transition-transform duration-200 hover:scale-110 active:scale-95 focus-visible:rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B5616E] motion-reduce:transition-none"
                     >
-                      <IconHeartFilled size={22} />
+                      <IconHeartFilled
+                        size={22}
+                        className="text-red-500 transition-colors group-hover:text-red-300"
+                      />
                     </button>
                   </div>
-
-                  <a
-                    href={googleMapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    Google 지도에서 보기
-                    <IconExternalLink size={16} />
-                  </a>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                    {restaurant?.location && (
+                      <button
+                        type="button"
+                        onClick={() => handleViewOnMap(restaurant)}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-[#B5616E] transition-colors hover:text-[#9D5360] hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B5616E]"
+                      >
+                        <IconMapPin size={16} />내 지도에서 보기
+                      </button>
+                    )}
+                    <a
+                      href={googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+                    >
+                      Google 지도에서 보기
+                      <IconExternalLink size={16} />
+                    </a>
+                  </div>
                 </div>
               );
             })
