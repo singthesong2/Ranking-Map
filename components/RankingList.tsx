@@ -1,3 +1,4 @@
+import { IconAlertCircle, IconRefresh } from "@tabler/icons-react";
 import type { Restaurant } from "@/types/restaurant";
 import {
   calculateDistance,
@@ -14,11 +15,19 @@ interface RankingListProps {
   onLoadMore: () => void;
   loading: boolean;
   error: string | null;
+  onRetry: () => void;
+  retrying: boolean;
 }
 
 interface RestaurantStatsProps {
   restaurant: Restaurant;
   walkingMinutes: number | null;
+}
+
+interface RestaurantApiErrorProps {
+  hasPreviousResults: boolean;
+  onRetry: () => void;
+  retrying: boolean;
 }
 
 function RestaurantStats({ restaurant, walkingMinutes }: RestaurantStatsProps) {
@@ -31,6 +40,65 @@ function RestaurantStats({ restaurant, walkingMinutes }: RestaurantStatsProps) {
   );
 }
 
+function RestaurantApiError({
+  hasPreviousResults,
+  onRetry,
+  retrying,
+}: RestaurantApiErrorProps) {
+  return (
+    <div
+      role="alert"
+      className={`rounded-2xl border border-[#EAD2D6] bg-[#FFF9FA] ${
+        hasPreviousResults ? "mb-3 p-4" : "p-6"
+      }`}
+    >
+      <div
+        className={`flex gap-3 ${
+          hasPreviousResults
+            ? "items-start"
+            : "flex-col items-center text-center"
+        }`}
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F8EFF0]">
+          <IconAlertCircle
+            size={24}
+            stroke={1.8}
+            className="text-[#B5616E]"
+            aria-hidden="true"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-[#783E50]">
+            {hasPreviousResults
+              ? "맛집 목록을 업데이트하지 못했어요"
+              : "맛집 정보를 불러오지 못했어요"}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-[#776C6F]">
+            {hasPreviousResults
+              ? "이전에 불러온 검색 결과를 표시하고 있어요."
+              : "인터넷 연결이나 서버 상태를 확인한 뒤 다시 시도해 주세요."}
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={retrying}
+        className={`mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#B5616E] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#9D5360] active:bg-[#874650] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B5616E] ${
+          hasPreviousResults ? "w-full sm:w-auto" : "w-full"
+        }`}
+      >
+        <IconRefresh
+          size={17}
+          aria-hidden="true"
+          className={retrying ? "animate-spin motion-reduce:animate-none" : ""}
+        />
+        {retrying ? "다시 불러오는 중..." : "다시 시도"}
+      </button>
+    </div>
+  );
+}
+
 function RankingList({
   restaurants,
   latitude,
@@ -39,9 +107,11 @@ function RankingList({
   onLoadMore,
   loading,
   error,
+  onRetry,
+  retrying,
 }: RankingListProps) {
   const hasSearchPosition = latitude !== null && longitude !== null;
-  const showSkeleton = loading && restaurants.length === 0;
+  const showSkeleton = loading && !error && restaurants.length === 0;
 
   const getWalkingMinutes = (restaurant: Restaurant) =>
     latitude !== null && longitude !== null
@@ -64,17 +134,14 @@ function RankingList({
         <span className="shrink-0 whitespace-nowrap text-xs font-medium text-[#8E8084]">
           {!hasSearchPosition
             ? "검색 위치 미선택"
-            : showSkeleton
-              ? "불러오는 중..."
-              : `${restaurants.length}곳 표시`}
+            : error && restaurants.length === 0
+              ? "불러오기 실패"
+              : showSkeleton
+                ? "불러오는 중..."
+                : `${restaurants.length}곳 표시`}
         </span>
       </div>
-      {showSkeleton ? (
-        <div role="status">
-          <span className="sr-only">음식점 목록을 불러오고 있습니다.</span>
-          <RankingListSkeleton />
-        </div>
-      ) : !hasSearchPosition ? (
+      {!hasSearchPosition ? (
         <div className="rounded-2xl border border-[#EEE6E4] bg-white p-8 text-center">
           <p className="text-sm font-medium text-[#685D60]">
             아직 검색할 위치가 선택되지 않았어요.
@@ -83,13 +150,17 @@ function RankingList({
             지역 검색이나 지도에서 검색 위치를 지정해 주세요.
           </p>
         </div>
-      ) : error && restaurants.length === 0 ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-red-100 bg-red-50 p-5 text-center text-sm text-red-600"
-        >
-          {error}
+      ) : showSkeleton ? (
+        <div role="status">
+          <span className="sr-only">음식점 목록을 불러오고 있습니다.</span>
+          <RankingListSkeleton />
         </div>
+      ) : error && restaurants.length === 0 ? (
+        <RestaurantApiError
+          hasPreviousResults={false}
+          onRetry={onRetry}
+          retrying={retrying}
+        />
       ) : restaurants.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <p className="text-sm text-gray-500">
@@ -101,7 +172,7 @@ function RankingList({
         </div>
       ) : (
         <>
-          {loading && (
+          {loading && !error && (
             <div
               role="status"
               className="mb-3 flex items-center gap-2 text-xs text-[#8E8084]"
@@ -114,13 +185,16 @@ function RankingList({
             </div>
           )}
           {error && (
-            <p role="alert" className="mb-3 text-sm text-red-600">
-              목록을 업데이트하지 못했습니다. 기존 결과를 표시합니다.
-            </p>
+            <RestaurantApiError
+              hasPreviousResults
+              onRetry={onRetry}
+              retrying={retrying}
+            />
           )}
           <div className="space-y-3">
             {restaurants.map((restaurant, index) => {
               const walkingMinutes = getWalkingMinutes(restaurant);
+
               return (
                 <article
                   key={restaurant.id}

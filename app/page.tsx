@@ -45,7 +45,12 @@ function Home() {
   const centerLatitude = searchCenter?.latitude ?? latitude;
   const centerLongitude = searchCenter?.longitude ?? longitude;
   const hasSearchPosition = centerLatitude !== null && centerLongitude !== null;
-  const { restaurants, loading, error } = useRestaurants({
+  const {
+    restaurants,
+    loading,
+    error,
+    refetch: refetchRestaurants,
+  } = useRestaurants({
     latitude: centerLatitude,
     longitude: centerLongitude,
     radius: debouncedRadius,
@@ -231,6 +236,10 @@ function Home() {
               }}
               loading={rankingLoading}
               error={error}
+              retrying={loading}
+              onRetry={() => {
+                void refetchRestaurants();
+              }}
             />
           </div>
         </div>
