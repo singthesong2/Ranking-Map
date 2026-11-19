@@ -40,6 +40,7 @@ function RankingList({
   loading,
   error,
 }: RankingListProps) {
+  const hasSearchPosition = latitude !== null && longitude !== null;
   const showSkeleton = loading && restaurants.length === 0;
 
   const getWalkingMinutes = (restaurant: Restaurant) =>
@@ -61,13 +62,26 @@ function RankingList({
           맛집 랭킹
         </h2>
         <span className="shrink-0 whitespace-nowrap text-xs font-medium text-[#8E8084]">
-          {showSkeleton ? "불러오는 중..." : `${restaurants.length}곳 표시`}
+          {!hasSearchPosition
+            ? "검색 위치 미선택"
+            : showSkeleton
+              ? "불러오는 중..."
+              : `${restaurants.length}곳 표시`}
         </span>
       </div>
       {showSkeleton ? (
         <div role="status">
           <span className="sr-only">음식점 목록을 불러오고 있습니다.</span>
           <RankingListSkeleton />
+        </div>
+      ) : !hasSearchPosition ? (
+        <div className="rounded-2xl border border-[#EEE6E4] bg-white p-8 text-center">
+          <p className="text-sm font-medium text-[#685D60]">
+            아직 검색할 위치가 선택되지 않았어요.
+          </p>
+          <p className="mt-2 text-xs text-[#93878A]">
+            지역 검색이나 지도에서 검색 위치를 지정해 주세요.
+          </p>
         </div>
       ) : error && restaurants.length === 0 ? (
         <div
