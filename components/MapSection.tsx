@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Restaurant } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
+import { useCurrentLocationMarker } from "@/hooks/useCurrentLocationMarker";
 import { useMapStore } from "@/stores/useMapStore";
 import { useKakaoMapLoader } from "@/hooks/useKakaoMapLoader";
 import MapErrorState from "@/components/MapErrorState";
@@ -37,7 +38,6 @@ function MapSection({
     retry: retryLoadMap,
   } = useKakaoMapLoader(mapContainerRef);
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
-  const markerRef = useRef<kakao.maps.CustomOverlay | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const searchPinRef = useRef<kakao.maps.Marker | null>(null);
 
@@ -61,14 +61,14 @@ function MapSection({
     searchLongitude,
   });
 
-  const radius = useMapStore((state) => state.radius);
-  const createCurrentLocationMarker = () => {
-    const marker = document.createElement("div");
-    marker.className =
-      "w-5 h-5 rounded-full bg-[#9D5360] border-4 border-white box-border";
+  useCurrentLocationMarker({
+    mapReady,
+    mapRef,
+    latitude,
+    longitude,
+  });
 
-    return marker;
-  };
+  const radius = useMapStore((state) => state.radius);
 
   const handleStartSelecting = () => {
     if (!mapRef.current) return;
@@ -112,28 +112,6 @@ function MapSection({
     mapRef.current.panTo(position);
     onReturnToSearchLocation();
   };
-
-  useEffect(() => {
-    if (!mapReady) return;
-    if (!mapRef.current) return;
-    if (latitude === null || longitude === null) return;
-
-    const currentPosition = new window.kakao.maps.LatLng(latitude, longitude);
-
-    if (markerRef.current) markerRef.current.setMap(null);
-
-    const marker = createCurrentLocationMarker();
-
-    markerRef.current = new window.kakao.maps.CustomOverlay({
-      position: currentPosition,
-      content: marker,
-      xAnchor: 0.5,
-      yAnchor: 0.5,
-      zIndex: 10,
-    });
-
-    markerRef.current.setMap(mapRef.current);
-  }, [latitude, longitude, mapReady]);
 
   useEffect(() => {
     if (!mapReady) return;
