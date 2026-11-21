@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Header from "@/components/Header";
 import SearchBox from "@/components/SearchBox";
 import CategoryFilter from "@/components/CategoryFilter";
@@ -25,6 +25,7 @@ function Home() {
   const [sortOption, setSortOption] = useState<RestaurantSort>("recommended");
   const [visibleCount, setVisibleCount] = useState(10);
   const [hasFinishedInitialLoad, setHasFinishedInitialLoad] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
   const radius = useMapStore((state) => state.radius);
   const setRadius = useMapStore((state) => state.setRadius);
   const setRestaurantResultsOpen = useMapStore(
@@ -56,30 +57,28 @@ function Home() {
     radius: debouncedRadius,
     category: selectedCategory,
   });
-
   const showToast = useToastStore((state) => state.showToast);
-
   const waitingForLocation = !searchCenter && locationLoading;
-
   const waitingForRadius =
     centerLatitude !== null &&
     centerLongitude !== null &&
     radius !== debouncedRadius;
-
   const rankingLoading = loading || waitingForRadius;
-
   const showLocationPermissionNotice =
     locationErrorType === "permission_denied" && !hasSearchPosition;
 
   useEffect(() => {
     if (hasFinishedInitialLoad) return;
-
-    if (waitingForLocation || waitingForRadius || loading) {
-      return;
-    }
+    if (waitingForLocation || waitingForRadius || loading) return;
 
     setHasFinishedInitialLoad(true);
   }, [hasFinishedInitialLoad, waitingForLocation, waitingForRadius, loading]);
+
+  useEffect(() => {
+    if (!mainRef.current) return;
+
+    mainRef.current.inert = !hasFinishedInitialLoad;
+  }, [hasFinishedInitialLoad]);
 
   const handleResetLocation = () => {
     setSearchCenter(null);
@@ -134,6 +133,7 @@ function Home() {
         return distanceA - distanceB;
       });
     }
+
     return sorted;
   }, [
     restaurants,
@@ -145,7 +145,6 @@ function Home() {
   ]);
 
   const displayRestaurants = sortedRestaurants.slice(0, visibleCount);
-
   const hasMore = visibleCount < sortedRestaurants.length;
 
   useEffect(() => {
@@ -173,6 +172,7 @@ function Home() {
         });
         return;
       }
+
       await navigator.clipboard.writeText(shareUrl);
       showToast("검색 링크를 복사했어요.", "success");
     } catch (error) {
@@ -196,71 +196,81 @@ function Home() {
     if (shared.sort !== undefined) setSortOption(shared.sort);
   }, [setSearchCenter, setRadius]);
 
-  if (!hasFinishedInitialLoad) {
-    return <FullPageLoading />;
-  }
-
   return (
-    <main className="flex min-h-screen flex-col bg-white text-black lg:h-dvh lg:overflow-hidden">
-      <Header onShareSearch={handleShareSearch} />
-      <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(360px,38%)_minmax(0,1fr)]">
-        <div className="contents lg:block lg:min-h-0 lg:overflow-y-auto lg:[scrollbar-gutter:stable] lg:border-r lg:border-[#EEE6E4] lg:bg-[#FFFDFC]">
-          <div className="order-1">
-            <SearchBox
-              latitude={centerLatitude}
-              longitude={centerLongitude}
-              onRestaurantMapSelect={(restaurant) => {
-                setSelectedRestaurant(restaurant ? { ...restaurant } : null);
-                setRestaurantResultsOpen(restaurant === null);
-              }}
-            />
-            {showLocationPermissionNotice && <LocationPermissionNotice />}
+    <>
+      <main
+        ref={mainRef}
+        aria-hidden={!hasFinishedInitialLoad}
+        className="flex min-h-screen flex-col bg-white text-black lg:h-dvh lg:overflow-hidden"
+      >
+        <Header onShareSearch={handleShareSearch} />
+        <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(360px,38%)_minmax(0,1fr)]">
+          <div className="contents lg:block lg:min-h-0 lg:overflow-y-auto lg:[scrollbar-gutter:stable] lg:border-r lg:border-[#EEE6E4] lg:bg-[#FFFDFC]">
+            <div className="order-1">
+              <SearchBox
+                latitude={centerLatitude}
+                longitude={centerLongitude}
+                onRestaurantMapSelect={(restaurant) => {
+                  setSelectedRestaurant(restaurant ? { ...restaurant } : null);
+                  setRestaurantResultsOpen(restaurant === null);
+                }}
+              />
+              {showLocationPermissionNotice && <LocationPermissionNotice />}
+            </div>
+            <div className="order-2 lg:bg-white lg:px-5 lg:py-4">
+              <CategoryFilter
+                selectedCategory={selectedCategory}
+                onChangeCategory={setSelectedCategory}
+              />
+            </div>
+            <div className="order-4">
+              <MapControls
+                sortOption={sortOption}
+                onSortChange={setSortOption}
+              />
+            </div>
+            <div className="order-5 lg:px-5 lg:py-5 lg:[&_article]:rounded-2xl lg:[&_article]:border-[#EEE6E4] lg:[&_li]:rounded-2xl lg:[&_li]:border-[#EEE6E4]">
+              <RankingList
+                restaurants={displayRestaurants}
+                latitude={centerLatitude}
+                longitude={centerLongitude}
+                hasMore={hasMore}
+                onLoadMore={() => {
+                  setVisibleCount((prev) => prev + 10);
+                }}
+                loading={rankingLoading}
+                error={error}
+                retrying={loading}
+                onRetry={() => {
+                  void refetchRestaurants();
+                }}
+              />
+            </div>
           </div>
-          <div className="order-2 lg:bg-white lg:px-5 lg:py-4">
-            <CategoryFilter
-              selectedCategory={selectedCategory}
-              onChangeCategory={setSelectedCategory}
-            />
-          </div>
-          <div className="order-4">
-            <MapControls sortOption={sortOption} onSortChange={setSortOption} />
-          </div>
-          <div className="order-5 lg:px-5 lg:py-5 lg:[&_article]:rounded-2xl lg:[&_article]:border-[#EEE6E4] lg:[&_li]:rounded-2xl lg:[&_li]:border-[#EEE6E4]">
-            <RankingList
+          <div className="order-3 mt-3 min-w-0 px-4 pb-4 lg:order-none lg:mt-0 lg:min-h-0 lg:px-0 lg:pb-0">
+            <MapSection
+              latitude={latitude}
+              longitude={longitude}
+              searchLatitude={centerLatitude}
+              searchLongitude={centerLongitude}
+              onResetLocation={handleResetLocation}
               restaurants={displayRestaurants}
-              latitude={centerLatitude}
-              longitude={centerLongitude}
-              hasMore={hasMore}
-              onLoadMore={() => {
-                setVisibleCount((prev) => prev + 10);
+              onReturnToSearchLocation={() => {
+                setSelectedRestaurant(null);
+                setRestaurantResultsOpen(true);
               }}
-              loading={rankingLoading}
+              loading={loading}
               error={error}
-              retrying={loading}
-              onRetry={() => {
-                void refetchRestaurants();
-              }}
             />
           </div>
         </div>
-        <div className="order-3 mt-3 min-w-0 px-4 pb-4 lg:order-none lg:mt-0 lg:min-h-0 lg:px-0 lg:pb-0">
-          <MapSection
-            latitude={latitude}
-            longitude={longitude}
-            searchLatitude={centerLatitude}
-            searchLongitude={centerLongitude}
-            onResetLocation={handleResetLocation}
-            restaurants={displayRestaurants}
-            onReturnToSearchLocation={() => {
-              setSelectedRestaurant(null);
-              setRestaurantResultsOpen(true);
-            }}
-            loading={loading}
-            error={error}
-          />
+      </main>
+      {!hasFinishedInitialLoad && (
+        <div className="fixed inset-0 z-[100] overflow-hidden bg-white">
+          <FullPageLoading />
         </div>
-      </div>
-    </main>
+      )}
+    </>
   );
 }
 
