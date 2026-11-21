@@ -539,6 +539,11 @@ function SearchBox({
         <div ref={historyAreaRef} className="relative">
           <form onSubmit={handleFormSubmit} className="flex gap-2">
             <input
+              id="search-keyword"
+              name="searchKeyword"
+              aria-label={
+                searchMode === "region" ? "지역 검색어" : "음식점 검색어"
+              }
               ref={searchInputRef}
               type="search"
               value={keyword}

@@ -67,6 +67,8 @@ function MapControls({ sortOption, onSortChange }: MapControlsProps) {
         </button>
       </div>
       <input
+        id="search-radius"
+        name="searchRadius"
         type="range"
         min={100}
         max={5000}
