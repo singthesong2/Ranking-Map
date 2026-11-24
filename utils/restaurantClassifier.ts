@@ -9,6 +9,38 @@ const ADDITIONAL_RESTAURANT_TYPES = new Set([
   "bar_and_grill",
 ]);
 
+const EXCLUDED_PLACE_KEYWORDS = [
+  "스터디카페",
+  "studycafe",
+  "studycafé",
+  "독서실",
+  "방탈출",
+  "보드게임",
+  "escaperoom",
+  "roomescape",
+  "boardgame",
+  "낚시카페",
+  "실내낚시터",
+  "fishingcafe",
+  "키즈카페",
+  "kidscafe",
+  "실내놀이터",
+  "만화카페",
+  "만화방",
+  "comiccafe",
+  "mangacafe",
+  "pc카페",
+  "pc방",
+  "피시방",
+  "pccafe",
+  "vr카페",
+  "vr체험",
+  "vrcafe",
+  "사주카페",
+  "타로카페",
+  "tarotcafe",
+];
+
 export function isRestaurantPlace(restaurant: Restaurant): boolean {
   const primaryType = restaurant.primaryType;
 
@@ -21,16 +53,14 @@ export function isRestaurantPlace(restaurant: Restaurant): boolean {
   );
 }
 
-export function isExcludedRestaurant(restaurant: Restaurant) {
-  const name = restaurant.displayName.text.toLowerCase();
+function normalizePlaceName(name: string): string {
+  return name.toLowerCase().replace(/[\s\-_/·.,]/g, "");
+}
 
-  return (
-    name.includes("스터디카페") ||
-    name.includes("스터디 카페") ||
-    name.includes("study cafe") ||
-    name.includes("study café") ||
-    name.includes("독서실")
-  );
+export function isExcludedRestaurant(restaurant: Restaurant): boolean {
+  const name = normalizePlaceName(restaurant.displayName.text);
+
+  return EXCLUDED_PLACE_KEYWORDS.some((keyword) => name.includes(keyword));
 }
 
 export function classifyRestaurant(restaurant: Restaurant): RestaurantCategory {
