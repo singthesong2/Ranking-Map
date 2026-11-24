@@ -13,6 +13,7 @@ interface UseRestaurantMarkersProps {
   restaurants: Restaurant[];
   searchLatitude: number | null;
   searchLongitude: number | null;
+  onMarkerSelect: (restaurant: Restaurant) => void;
 }
 
 export function useRestaurantMarkers({
@@ -21,11 +22,15 @@ export function useRestaurantMarkers({
   restaurants,
   searchLatitude,
   searchLongitude,
+  onMarkerSelect,
 }: UseRestaurantMarkersProps) {
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
 
     const map = mapRef.current;
+    const mouseHoverQuery = window.matchMedia(
+      "(hover: hover) and (pointer: fine)",
+    );
     let hoverMark: kakao.maps.CustomOverlay | null = null;
 
     const clearHover = () => {
@@ -52,11 +57,13 @@ export function useRestaurantMarkers({
       const marker = new window.kakao.maps.Marker({
         position,
         image: markerImage,
+        clickable: true,
       });
 
       marker.setMap(map);
 
       const handleMouseOver = () => {
+        if (!mouseHoverQuery.matches) return;
         clearHover();
 
         const infoBox = document.createElement("div");
@@ -115,6 +122,12 @@ export function useRestaurantMarkers({
       };
 
       const handleClick = () => {
+        clearHover();
+        if (!mouseHoverQuery.matches) {
+          onMarkerSelect(restaurant);
+          return;
+        }
+
         if (!restaurant.googleMapsUri) return;
 
         window.open(restaurant.googleMapsUri, "_blank", "noopener,noreferrer");
@@ -151,5 +164,12 @@ export function useRestaurantMarkers({
         },
       );
     };
-  }, [restaurants, mapReady, searchLatitude, searchLongitude, mapRef]);
+  }, [
+    restaurants,
+    mapReady,
+    searchLatitude,
+    searchLongitude,
+    mapRef,
+    onMarkerSelect,
+  ]);
 }

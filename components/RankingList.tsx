@@ -33,7 +33,12 @@ interface RestaurantApiErrorProps {
 function RestaurantStats({ restaurant, walkingMinutes }: RestaurantStatsProps) {
   return (
     <>
-      <span>⭐ {restaurant.rating ?? "정보 없음"}</span>
+      <span>
+        <span className="text-[#D49A38]" aria-hidden="true">
+          ★
+        </span>{" "}
+        {restaurant.rating ?? "정보 없음"}
+      </span>
       <span>리뷰 {restaurant.userRatingCount ?? 0}개</span>
       {walkingMinutes !== null && <span>도보 약 {walkingMinutes}분</span>}
     </>
