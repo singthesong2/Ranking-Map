@@ -129,6 +129,7 @@ export async function POST(request: Request) {
 
         return distance <= safeRadius;
       })
+      .filter((restaurant) => !isExcludedRestaurant(restaurant))
       .filter((restaurant) => classifyRestaurant(restaurant) === category)
       .sort((a, b) => {
         const reviewDifference =
