@@ -1,7 +1,10 @@
 "use client";
 
 import type { Restaurant } from "@/types/restaurant";
-import { calculateDistance } from "@/utils/calculateDistance";
+import {
+  calculateDistance,
+  calculateWalkingMinutes,
+} from "@/utils/calculateDistance";
 
 interface RestaurantMarkerPreviewProps {
   restaurant: Restaurant;
@@ -25,12 +28,8 @@ function RestaurantMarkerPreview({
           restaurant.location.longitude,
         )
       : null;
-  const distanceLabel =
-    distance === null
-      ? "거리 정보 없음"
-      : distance < 1000
-        ? `${Math.round(distance)}m`
-        : `${(distance / 1000).toFixed(1)}km`;
+  const walkingMinutes =
+    distance !== null ? calculateWalkingMinutes(distance) : null;
 
   return (
     <aside
@@ -47,8 +46,12 @@ function RestaurantMarkerPreview({
               ★
             </span>{" "}
             {restaurant.rating?.toFixed(1) ?? "정보 없음"}
-            {" / "}리뷰 {restaurant.userRatingCount ?? 0}개{" / "}
-            {distanceLabel}
+            {" / "}리뷰 : {restaurant.userRatingCount ?? 0}개
+            {walkingMinutes !== null && (
+              <>
+                {" / "}도보 : 약 {walkingMinutes}분
+              </>
+            )}
           </p>
         </div>
         <button

@@ -5,6 +5,7 @@ import type { Restaurant } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
 import { useCurrentLocationMarker } from "@/hooks/useCurrentLocationMarker";
+import { useOutsideClick } from "@/hooks/useOutsideClick";
 import { useMapStore } from "@/stores/useMapStore";
 import { useKakaoMapLoader } from "@/hooks/useKakaoMapLoader";
 import MapErrorState from "@/components/MapErrorState";
@@ -31,6 +32,7 @@ function MapSection({
   restaurants,
   onReturnToSearchLocation,
 }: MapSectionProps) {
+  const mapSectionRef = useRef<HTMLElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const {
     mapRef,
@@ -48,6 +50,9 @@ function MapSection({
   const setSearchCenter = useMapStore((state) => state.setSearchCenter);
   const handleMarkerSelect = useCallback((restaurant: Restaurant) => {
     setPreviewRestaurantId(restaurant.id);
+  }, []);
+  const closePreview = useCallback(() => {
+    setPreviewRestaurantId(null);
   }, []);
 
   useRestaurantMarkers({
@@ -80,6 +85,8 @@ function MapSection({
   const previewRestaurant =
     restaurants.find((restaurant) => restaurant.id === previewRestaurantId) ??
     null;
+
+  useOutsideClick(mapSectionRef, closePreview, previewRestaurantId !== null);
 
   const handleStartSelecting = () => {
     if (!mapRef.current) return;
@@ -129,7 +136,7 @@ function MapSection({
 
     const map = mapRef.current;
     const handleMapClick = () => {
-      setPreviewRestaurantId(null);
+      closePreview();
     };
 
     window.kakao.maps.event.addListener(map, "click", handleMapClick);
@@ -137,7 +144,7 @@ function MapSection({
     return () => {
       window.kakao.maps.event.removeListener(map, "click", handleMapClick);
     };
-  }, [mapReady, mapRef]);
+  }, [mapReady, mapRef, closePreview]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -235,7 +242,7 @@ function MapSection({
   }, [mapReady]);
 
   return (
-    <section className="min-w-0 lg:h-full">
+    <section ref={mapSectionRef} className="min-w-0 lg:h-full">
       <div className="relative lg:h-full">
         <div
           ref={mapContainerRef}
@@ -323,7 +330,7 @@ function MapSection({
             restaurant={previewRestaurant}
             searchLatitude={searchLatitude}
             searchLongitude={searchLongitude}
-            onClose={() => setPreviewRestaurantId(null)}
+            onClose={closePreview}
           />
         )}
       </div>
