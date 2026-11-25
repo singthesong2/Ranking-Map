@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import type { Restaurant } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
 import { useCurrentLocationMarker } from "@/hooks/useCurrentLocationMarker";
+import { useOutsideClick } from "@/hooks/useOutsideClick";
 import { useMapStore } from "@/stores/useMapStore";
 import { useKakaoMapLoader } from "@/hooks/useKakaoMapLoader";
 import MapErrorState from "@/components/MapErrorState";
+import RestaurantMarkerPreview from "@/components/RestaurantMarkerPreview";
 
 interface MapSectionProps {
   latitude: number | null;
@@ -30,6 +32,7 @@ function MapSection({
   restaurants,
   onReturnToSearchLocation,
 }: MapSectionProps) {
+  const mapSectionRef = useRef<HTMLElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const {
     mapRef,
@@ -39,10 +42,18 @@ function MapSection({
   } = useKakaoMapLoader(mapContainerRef);
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
+  const [previewRestaurantId, setPreviewRestaurantId] = useState<string | null>(
+    null,
+  );
   const searchPinRef = useRef<kakao.maps.Marker | null>(null);
-
   const selectedRestaurant = useMapStore((state) => state.selectedRestaurant);
   const setSearchCenter = useMapStore((state) => state.setSearchCenter);
+  const handleMarkerSelect = useCallback((restaurant: Restaurant) => {
+    setPreviewRestaurantId(restaurant.id);
+  }, []);
+  const closePreview = useCallback(() => {
+    setPreviewRestaurantId(null);
+  }, []);
 
   useRestaurantMarkers({
     mapReady,
@@ -50,6 +61,7 @@ function MapSection({
     restaurants,
     searchLatitude,
     searchLongitude,
+    onMarkerSelect: handleMarkerSelect,
   });
 
   useSelectedRestaurantMarker({
@@ -69,6 +81,12 @@ function MapSection({
   });
 
   const radius = useMapStore((state) => state.radius);
+
+  const previewRestaurant =
+    restaurants.find((restaurant) => restaurant.id === previewRestaurantId) ??
+    null;
+
+  useOutsideClick(mapSectionRef, closePreview, previewRestaurantId !== null);
 
   const handleStartSelecting = () => {
     if (!mapRef.current) return;
@@ -112,6 +130,21 @@ function MapSection({
     mapRef.current.panTo(position);
     onReturnToSearchLocation();
   };
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+
+    const map = mapRef.current;
+    const handleMapClick = () => {
+      closePreview();
+    };
+
+    window.kakao.maps.event.addListener(map, "click", handleMapClick);
+
+    return () => {
+      window.kakao.maps.event.removeListener(map, "click", handleMapClick);
+    };
+  }, [mapReady, mapRef, closePreview]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -209,7 +242,7 @@ function MapSection({
   }, [mapReady]);
 
   return (
-    <section className="min-w-0 lg:h-full">
+    <section ref={mapSectionRef} className="min-w-0 lg:h-full">
       <div className="relative lg:h-full">
         <div
           ref={mapContainerRef}
@@ -291,6 +324,14 @@ function MapSection({
               </>
             )}
           </div>
+        )}
+        {mapReady && previewRestaurant && (
+          <RestaurantMarkerPreview
+            restaurant={previewRestaurant}
+            searchLatitude={searchLatitude}
+            searchLongitude={searchLongitude}
+            onClose={closePreview}
+          />
         )}
       </div>
     </section>

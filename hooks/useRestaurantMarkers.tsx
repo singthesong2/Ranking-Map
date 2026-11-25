@@ -13,6 +13,7 @@ interface UseRestaurantMarkersProps {
   restaurants: Restaurant[];
   searchLatitude: number | null;
   searchLongitude: number | null;
+  onMarkerSelect: (restaurant: Restaurant) => void;
 }
 
 export function useRestaurantMarkers({
@@ -21,11 +22,16 @@ export function useRestaurantMarkers({
   restaurants,
   searchLatitude,
   searchLongitude,
+  onMarkerSelect,
 }: UseRestaurantMarkersProps) {
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
 
     const map = mapRef.current;
+    const mouseHoverQuery = window.matchMedia(
+      "(hover: hover) and (pointer: fine)",
+    );
+
     let hoverMark: kakao.maps.CustomOverlay | null = null;
 
     const clearHover = () => {
@@ -52,30 +58,20 @@ export function useRestaurantMarkers({
       const marker = new window.kakao.maps.Marker({
         position,
         image: markerImage,
+        clickable: true,
       });
 
       marker.setMap(map);
 
       const handleMouseOver = () => {
+        if (!mouseHoverQuery.matches) return;
         clearHover();
-
         const infoBox = document.createElement("div");
-        infoBox.style.pointerEvents = "none";
-        infoBox.style.backgroundColor = "white";
-        infoBox.style.border = "1px solid #e5e7eb";
-        infoBox.style.borderRadius = "8px";
-        infoBox.style.padding = "8px 12px";
-        infoBox.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
-        infoBox.style.whiteSpace = "nowrap";
-
+        infoBox.className =
+          "pointer-events-none whitespace-nowrap rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.15)]";
         const name = document.createElement("div");
-
         name.textContent = restaurant.displayName.text;
-        name.style.fontSize = "14px";
-        name.style.fontWeight = "700";
-        name.style.color = "#111827";
-
-        const info = document.createElement("div");
+        name.className = "text-sm font-bold text-[#111827]";
 
         const distance =
           searchLatitude !== null && searchLongitude !== null
@@ -87,17 +83,20 @@ export function useRestaurantMarkers({
               )
             : null;
 
-        info.textContent = `⭐ ${restaurant.rating ?? "정보 없음"} / 리뷰 : ${restaurant.userRatingCount ?? 0}개 / 도보 : ${
-          distance !== null
-            ? `약 ${calculateWalkingMinutes(distance)}분`
-            : "정보 없음"
+        const walkingMinutes =
+          distance !== null ? calculateWalkingMinutes(distance) : null;
+        const info = document.createElement("div");
+        info.className = "mt-1 text-xs text-[#6b7280]";
+        const star = document.createElement("span");
+        star.textContent = "★";
+        star.className = "text-[#D49A38]";
+        star.setAttribute("aria-hidden", "true");
+        const details = document.createElement("span");
+        details.textContent = ` ${restaurant.rating ?? "정보 없음"} / 리뷰 : ${restaurant.userRatingCount ?? 0}개${
+          walkingMinutes !== null ? ` / 도보 : 약 ${walkingMinutes}분` : ""
         }`;
-
-        info.style.marginTop = "4px";
-        info.style.fontSize = "12px";
-        info.style.color = "#6b7280";
-        infoBox.appendChild(name);
-        infoBox.appendChild(info);
+        info.append(star, details);
+        infoBox.append(name, info);
 
         hoverMark = new window.kakao.maps.CustomOverlay({
           position,
@@ -106,7 +105,6 @@ export function useRestaurantMarkers({
           yAnchor: 1.9,
           zIndex: 200,
         });
-
         hoverMark.setMap(map);
       };
 
@@ -115,10 +113,15 @@ export function useRestaurantMarkers({
       };
 
       const handleClick = () => {
+        clearHover();
+        if (!mouseHoverQuery.matches) {
+          onMarkerSelect(restaurant);
+          return;
+        }
         if (!restaurant.googleMapsUri) return;
-
         window.open(restaurant.googleMapsUri, "_blank", "noopener,noreferrer");
       };
+
       window.kakao.maps.event.addListener(marker, "mouseover", handleMouseOver);
       window.kakao.maps.event.addListener(marker, "mouseout", handleMouseOut);
       window.kakao.maps.event.addListener(marker, "click", handleClick);
@@ -133,7 +136,6 @@ export function useRestaurantMarkers({
 
     return () => {
       clearHover();
-
       markers.forEach(
         ({ marker, handleMouseOver, handleMouseOut, handleClick }) => {
           window.kakao.maps.event.removeListener(
@@ -147,9 +149,17 @@ export function useRestaurantMarkers({
             handleMouseOut,
           );
           window.kakao.maps.event.removeListener(marker, "click", handleClick);
+
           marker.setMap(null);
         },
       );
     };
-  }, [restaurants, mapReady, searchLatitude, searchLongitude, mapRef]);
+  }, [
+    restaurants,
+    mapReady,
+    searchLatitude,
+    searchLongitude,
+    mapRef,
+    onMarkerSelect,
+  ]);
 }
