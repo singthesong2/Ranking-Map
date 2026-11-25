@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Restaurant } from "@/types/restaurant";
 import { useRestaurantMarkers } from "@/hooks/useRestaurantMarkers";
 import { useSelectedRestaurantMarker } from "@/hooks/useSelectedRestaurantMarker";
@@ -34,12 +34,15 @@ function MapSection({
 }: MapSectionProps) {
   const mapSectionRef = useRef<HTMLElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const hasSearchCenter = searchLatitude !== null && searchLongitude !== null;
+  const initialLatitude = hasSearchCenter ? searchLatitude : latitude;
+  const initialLongitude = hasSearchCenter ? searchLongitude : longitude;
   const {
     mapRef,
     mapReady,
     status: mapStatus,
     retry: retryLoadMap,
-  } = useKakaoMapLoader(mapContainerRef);
+  } = useKakaoMapLoader(mapContainerRef, initialLatitude, initialLongitude);
   const radiusCircleRef = useRef<kakao.maps.Circle | null>(null);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [previewRestaurantId, setPreviewRestaurantId] = useState<string | null>(
@@ -51,6 +54,7 @@ function MapSection({
   const handleMarkerSelect = useCallback((restaurant: Restaurant) => {
     setPreviewRestaurantId(restaurant.id);
   }, []);
+
   const closePreview = useCallback(() => {
     setPreviewRestaurantId(null);
   }, []);
@@ -81,11 +85,9 @@ function MapSection({
   });
 
   const radius = useMapStore((state) => state.radius);
-
   const previewRestaurant =
     restaurants.find((restaurant) => restaurant.id === previewRestaurantId) ??
     null;
-
   useOutsideClick(mapSectionRef, closePreview, previewRestaurantId !== null);
 
   const handleStartSelecting = () => {
@@ -127,6 +129,7 @@ function MapSection({
       searchLatitude,
       searchLongitude,
     );
+
     mapRef.current.panTo(position);
     onReturnToSearchLocation();
   };
@@ -147,8 +150,7 @@ function MapSection({
   }, [mapReady, mapRef, closePreview]);
 
   useEffect(() => {
-    if (!mapReady) return;
-    if (!mapRef.current) return;
+    if (!mapReady || !mapRef.current) return;
     if (searchLatitude === null || searchLongitude === null) return;
 
     const currentPosition = new window.kakao.maps.LatLng(
@@ -172,12 +174,10 @@ function MapSection({
 
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
-
     if (isSelectingLocation) {
       searchPinRef.current?.setMap(null);
       return;
     }
-
     if (searchLatitude === null || searchLongitude === null) return;
     if (searchLatitude === latitude && searchLongitude === longitude) {
       searchPinRef.current?.setMap(null);
@@ -221,12 +221,22 @@ function MapSection({
     if (!mapReady || !mapRef.current) return;
     if (searchLatitude === null || searchLongitude === null) return;
 
+    const map = mapRef.current;
+    const currentCenter = map.getCenter();
+
+    if (
+      Math.abs(currentCenter.getLat() - searchLatitude) < 1e-7 &&
+      Math.abs(currentCenter.getLng() - searchLongitude) < 1e-7
+    ) {
+      return;
+    }
+
     const searchPosition = new window.kakao.maps.LatLng(
       searchLatitude,
       searchLongitude,
     );
 
-    mapRef.current.setCenter(searchPosition);
+    map.setCenter(searchPosition);
   }, [searchLatitude, searchLongitude, mapReady]);
 
   useEffect(() => {
@@ -238,6 +248,7 @@ function MapSection({
     });
 
     observer.observe(mapContainerRef.current);
+
     return () => observer.disconnect();
   }, [mapReady]);
 

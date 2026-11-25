@@ -9,19 +9,23 @@ const MAP_LOAD_TIMEOUT = 15000;
 
 export function useKakaoMapLoader(
   mapContainerRef: RefObject<HTMLDivElement | null>,
+  initialLatitude: number | null,
+  initialLongitude: number | null,
 ) {
   const mapRef = useRef<kakao.maps.Map | null>(null);
+
   const [status, setStatus] = useState<MapLoadStatus>(
     process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ? "loading" : "error",
   );
 
+  const [sdkReady, setSdkReady] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const container = mapContainerRef.current;
     const apiKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
 
-    if (!container || !apiKey) return;
+    if (!container || !apiKey || mapRef.current) return;
 
     let cancelled = false;
     let finished = false;
@@ -33,52 +37,44 @@ export function useKakaoMapLoader(
       finished = true;
       setStatus("error");
     };
+
     const timeoutId = window.setTimeout(handleFailure, MAP_LOAD_TIMEOUT);
-    const initializeMap = () => {
-      if (cancelled || finished || mapRef.current) return;
+    const handleSdkLoaded = () => {
+      if (cancelled || finished) return;
 
       try {
         if (!window.kakao?.maps?.load) {
           handleFailure();
           return;
         }
-
         window.kakao.maps.load(() => {
-          if (cancelled || finished || mapRef.current) return;
-
-          try {
-            const center = new window.kakao.maps.LatLng(37.5665, 126.978);
-            const map = new window.kakao.maps.Map(container, {
-              center,
-              level: 3,
-            });
-            mapRef.current = map;
-            finished = true;
-            window.clearTimeout(timeoutId);
-            setStatus("ready");
-          } catch (error) {
+          if (cancelled || finished) return;
+          if (!window.kakao?.maps?.Map || !window.kakao?.maps?.LatLng) {
             handleFailure();
+            return;
           }
+          finished = true;
+          window.clearTimeout(timeoutId);
+          setSdkReady(true);
         });
-      } catch (error) {
+      } catch {
         handleFailure();
       }
     };
 
-    if (window.kakao?.maps?.Map && window.kakao?.maps?.LatLng) initializeMap();
-    else {
+    if (window.kakao?.maps?.Map && window.kakao?.maps?.LatLng) {
+      handleSdkLoaded();
+    } else {
       const sdkScript = document.createElement("script");
-
       sdkScript.src =
         `https://dapi.kakao.com/v2/maps/sdk.js` +
         `?appkey=${encodeURIComponent(apiKey)}` +
         `&autoload=false&libraries=services` +
         `&retry=${retryCount}`;
       sdkScript.async = true;
-      sdkScript.onload = initializeMap;
-      sdkScript.onerror = () => {
-        handleFailure();
-      };
+      sdkScript.setAttribute("fetchpriority", "high");
+      sdkScript.onload = handleSdkLoaded;
+      sdkScript.onerror = handleFailure;
       document.head.appendChild(sdkScript);
       script = sdkScript;
     }
@@ -95,8 +91,36 @@ export function useKakaoMapLoader(
     };
   }, [mapContainerRef, retryCount]);
 
+  useEffect(() => {
+    const container = mapContainerRef.current;
+
+    if (!sdkReady || !container || mapRef.current) return;
+    if (initialLatitude === null || initialLongitude === null) return;
+
+    try {
+      const center = new window.kakao.maps.LatLng(
+        initialLatitude,
+        initialLongitude,
+      );
+      mapRef.current = new window.kakao.maps.Map(container, {
+        center,
+        level: 3,
+      });
+      setStatus("ready");
+    } catch {
+      setStatus("error");
+    }
+  }, [
+    sdkReady,
+    mapContainerRef,
+    initialLatitude,
+    initialLongitude,
+    retryCount,
+  ]);
+
   const retry = () => {
     if (status !== "error") return;
+
     setStatus("loading");
     setRetryCount((prev) => prev + 1);
   };
