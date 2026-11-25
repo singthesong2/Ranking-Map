@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-wanted-sans), "Malgun Gothic", sans-serif;
+}
+
 @keyframes custom-toast-lifecycle {
   0% {
     opacity: 0;
