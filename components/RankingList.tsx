@@ -203,9 +203,9 @@ function RankingList({
               return (
                 <article
                   key={restaurant.id}
-                  className="rounded-2xl border border-[#EEE6E4] bg-white transition-all duration-200 hover:border-[#D9B1B6] hover:bg-[#FFFBFB] hover:shadow-[0_8px_24px_rgba(58,34,38,0.06)] active:border-[#D9B1B6] active:bg-[#FFFBFB]"
+                  className="relative rounded-2xl border border-[#EEE6E4] bg-white transition-all duration-200 hover:border-[#D9B1B6] hover:bg-[#FFFBFB] hover:shadow-[0_8px_24px_rgba(58,34,38,0.06)] active:border-[#D9B1B6] active:bg-[#FFFBFB]"
                 >
-                  <div className="flex items-center gap-3 p-4 max-[359px]:pb-2">
+                  <div className="flex items-center gap-3 p-4 max-[359px]:pb-2 max-[359px]:pr-16">
                     <a
                       href={restaurant.googleMapsUri}
                       target="_blank"
@@ -233,7 +233,7 @@ function RankingList({
                         </div>
                       </div>
                     </a>
-                    <div className="shrink-0">
+                    <div className="shrink-0 max-[359px]:absolute max-[359px]:right-4 max-[359px]:top-1/2 max-[359px]:-translate-y-1/2">
                       <FavoriteButton restaurant={restaurant} />
                     </div>
                   </div>
