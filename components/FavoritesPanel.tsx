@@ -136,7 +136,7 @@ export default function FavoritesPanel({
         aria-label="찜한 맛집 목록"
         aria-hidden={!isOpen}
         inert={!isOpen}
-        className={`fixed inset-y-0 right-0 z-50
+        className={`app-safe-area fixed inset-y-0 right-0 z-50
           flex w-full max-w-md flex-col bg-white shadow-xl
           transition-transform duration-400 ease-in-out
           motion-reduce:transition-none

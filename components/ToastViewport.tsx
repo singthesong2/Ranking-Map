@@ -34,7 +34,7 @@ export default function ToastViewport() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 top-8 z-[200] flex justify-center">
+    <div className="app-safe-area pointer-events-none fixed inset-x-4 top-8 z-[200] flex justify-center">
       <div
         key={toast.id}
         role="status"
