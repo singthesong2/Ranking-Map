@@ -9,8 +9,6 @@ Kakao Maps로 음식점 위치를 표시하고, Google Places API로 음식점 �
 - **개발 형태:** 개인 프로젝트
 - **개발 기간:** [2026.10.11 ~ 2026.11.26]
 
----
-
 ## 목차
 
 - [프로젝트 소개](#프로젝트-소개)
@@ -23,8 +21,6 @@ Kakao Maps로 음식점 위치를 표시하고, Google Places API로 음식점 �
 - [주요 화면](#주요-화면)
 - [트러블슈팅](#트러블슈팅)
 - [프로젝트 회고](#프로젝트-회고)
-
----
 
 ## 프로젝트 소개
 
@@ -58,23 +54,28 @@ Kakao Maps로 음식점 위치를 표시하고, Google Places API로 음식점 �
 - 최근 검색 기록 관리 및 검색 조건 공유 기능
 - 위치 권한 안내, 토스트 알림, 확인 모달
 - 데스크톱·태블릿·모바일 반응형 UI
+- CSS Safe Area를 활용한 iPhone 노치·홈 인디케이터 영역 대응
+- `prefers-reduced-motion`을 활용한 사용자 모션 감소 설정 대응
 
 > 예상 도보 시간은 좌표 간 거리 기반 추정치이며 실제 도보 경로를 계산한 값은 아님.
 
 ## 기술 스택
 
-| 구분         | 사용 기술                           | 역할                                    |
-| ------------ | ----------------------------------- | --------------------------------------- |
-| 프레임워크   | Next.js (App Router), React         | 화면 구성, 서버 API Route               |
-| 언어         | TypeScript                          | 컴포넌트 및 데이터 타입 관리            |
-| 스타일       | Tailwind CSS, Wanted Sans           | 반응형 UI, 웹폰트                       |
-| 전역 상태    | Zustand                             | 지도, 즐겨찾기, 검색 기록, 토스트 상태  |
-| 서버 데이터  | TanStack Query                      | API 요청, 캐싱, 키워드 검색 페이지 관리 |
-| 데이터 검증  | Zod                                 | 검색 기록 및 공유 검색 데이터 스키마    |
-| 지도         | Kakao Maps JavaScript SDK           | 지도, 마커, 검색 반경 표시              |
-| 장소 데이터  | Google Places API                   | 음식점 검색 및 장소 정보 조회           |
-| 기타         | Geolocation API, Tabler Icons React | 위치 조회, 아이콘                       |
-| 개발 및 배포 | Git, GitHub, Vercel                 | 버전 관리, 디버깅, 배포                 |
+| 구분             | 사용 기술                             | 역할                                                                |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------------- |
+| 프레임워크       | Next.js (App Router), React           | 화면 구성, 서버 API Route                                           |
+| 언어             | TypeScript                            | 컴포넌트 및 데이터 타입 관리                                        |
+| 스타일           | Tailwind CSS, Wanted Sans             | 반응형 UI, 웹폰트                                                   |
+| 전역 상태        | Zustand                               | 지도, 즐겨찾기, 검색 기록, 토스트 상태                              |
+| 데이터 패칭      | TanStack Query                        | API 요청, 캐싱, 키워드 검색 페이지 관리                             |
+| 데이터 저장      | localStorage                          | 브라우저 내 데이터 저장                                             |
+| 데이터 검증      | Zod                                   | 검색 기록 및 공유 검색 데이터 스키마                                |
+| 지도             | Kakao Maps JavaScript SDK             | 지도, 마커, 검색 반경 표시                                          |
+| 장소 데이터      | Google Places API                     | 음식점 검색 및 장소 정보 조회                                       |
+| 접근성/기기 대응 | CSS Safe Area, prefers-reduced-motion | iOS 안전 영역 및 사용자 모션 감소 설정 대응                         |
+| 최적화           | Debounce (Custom Hook)                | 지역·음식점 검색어 입력 및 검색 반경 변경 시 불필요한 API 요청 감소 |
+| 기타             | Geolocation API, Tabler Icons React   | 위치 조회, 아이콘                                                   |
+| 개발 및 배포     | Git, GitHub, Vercel                   | 버전 관리, 디버깅, 배포                                             |
 
 ## 프로젝트 파일 구조
 
@@ -120,6 +121,21 @@ rankingmap/
 │   ├── SearchBox.tsx                     # 검색 입력 UI
 │   ├── SearchHistoryList.tsx             # 최근 검색 기록 목록
 │   └── ToastViewport.tsx                 # 전역 토스트 표시
+│
+├── docs/
+│   └── screenshots/                     # README 스크린샷
+│       ├── category-search.png
+│       ├── desktop-main.png
+│       ├── favorites.png
+│       ├── location-permission-denied.png
+│       ├── map-error.png
+│       ├── marker-preview-desktop.png
+│       ├── marker-preview-mobile.png
+│       ├── mobile-main.png
+│       ├── not-found.png
+│       ├── region-search-history.png
+│       ├── restaurant-list-error.png
+│       └── restaurant-search-history.png
 │
 ├── font/
 │   └── WantedSansVariable.woff2          # 로컬 가변 폰트
@@ -231,15 +247,67 @@ GOOGLE_PLACES_API_KEY=구글_Places_API_키
 
 ## 주요 화면
 
-스크린샷을 `docs/screenshots/`에 추가한 뒤 아래 경로에 연결할 예정입니다.
+### 데스크톱 메인 화면
 
-| 화면                  | 이미지             |
-| --------------------- | ------------------ |
-| 데스크톱 메인         | 추후 스크린샷 추가 |
-| 모바일 메인           | 추후 스크린샷 추가 |
-| 카테고리 검색 결과    | 추후 스크린샷 추가 |
-| 지도 마커 미리보기    | 추후 스크린샷 추가 |
-| 즐겨찾기 및 검색 기록 | 추후 스크린샷 추가 |
+![데스크톱 메인 화면](docs/screenshots/desktop-main.png)
+
+### 모바일 메인 화면
+
+![모바일 메인 화면](docs/screenshots/mobile-main.png)
+
+### 카테고리별 음식점 검색
+
+![카테고리별 음식점 검색](docs/screenshots/category-search.png)
+
+### 지도 마커 미리보기
+
+**데스크톱 — 마커 호버 시 음식점 정보 표시**
+
+![데스크톱 지도 마커 미리보기](docs/screenshots/marker-preview-desktop.png)
+
+**모바일·태블릿 — 마커 선택 시 음식점 미리보기 카드 표시**
+
+![모바일/테블릿 지도 마커 미리보기](docs/screenshots/marker-preview-mobile.png)
+
+### 즐겨찾기
+
+![즐겨찾기 목록](docs/screenshots/favorites.png)
+
+### 검색 기록
+
+**지역 검색 기록**
+
+![지역 검색 기록](docs/screenshots/region-search-history.png)
+
+**음식점 검색 기록**
+
+![음식점 검색 기록](docs/screenshots/restaurant-search-history.png)
+
+## 예외 상황 처리 화면
+
+### 404 페이지
+
+존재하지 않는 경로에 접근했을 때 안내 화면을 표시합니다.
+
+![404 페이지](docs/screenshots/not-found.png)
+
+### 위치 권한 거부
+
+현재 위치 접근이 차단된 경우 사용자에게 위치 권한 관련 안내를 제공합니다.
+
+![위치 권한 거부 안내](docs/screenshots/location-permission-denied.png)
+
+### 음식점 목록 조회 실패
+
+음식점 데이터 요청이 실패했을 때 오류 메시지와 재시도 버튼을 표시합니다.
+
+![음식점 목록 조회 실패](docs/screenshots/restaurant-list-error.png)
+
+### Kakao Maps 로딩 실패
+
+지도 SDK를 불러오지 못하면 지도 오류 안내와 재시도 버튼을 표시합니다.
+
+![지도 로딩 실패](docs/screenshots/map-error.png)
 
 ## 트러블슈팅
 
@@ -275,9 +343,8 @@ Next.js와 TypeScript 환경에서 지도 SDK 및 외부 장소 데이터 API를
 
 ### 아쉬운 점 및 개선 방향
 
-기능을 확장하면서 일부 컴포넌트와 상태 처리 구조를 여러 차례 수정했습니다. 앞으로는 주요 데이터 흐름을 먼저 정리하고, 다양한 기기 및 네트워크 환경에서 테스트를 보강할 계획입니다.
-
----
+국내 사용자에게 친숙한 네이버·카카오의 장소 정보를 활용해 더욱 다양하고 상세한 음식점 정보를 제공하고 싶었지만, API 이용 비용과 개발 예산을 고려해 Google Places API를 선택했습니다. Google Places API 역시 호출량과 조회 정보에 따른 과금 부담으로 검색 결과 수와 제공 정보를 제한해야 했던 점이 아쉬웠습니다.
+향후에는 API 비용과 사용량을 고려하면서 더 많은 음식점을 검색하고, 사용자에게 유용한 상세 정보를 제공할 수 있도록 개선하고 싶습니다.
 
 ## 참고 자료
 
