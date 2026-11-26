@@ -201,7 +201,7 @@ function Home() {
       <main
         ref={mainRef}
         aria-hidden={!hasFinishedInitialLoad}
-        className="flex min-h-screen flex-col bg-white text-black lg:h-dvh lg:overflow-hidden"
+        className="app-safe-area flex min-h-screen flex-col bg-white text-black lg:h-dvh lg:overflow-hidden"
       >
         <Header onShareSearch={handleShareSearch} />
         <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(360px,38%)_minmax(0,1fr)]">

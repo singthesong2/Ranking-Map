@@ -54,25 +54,28 @@ Kakao Maps로 음식점 위치를 표시하고, Google Places API로 음식점 �
 - 최근 검색 기록 관리 및 검색 조건 공유 기능
 - 위치 권한 안내, 토스트 알림, 확인 모달
 - 데스크톱·태블릿·모바일 반응형 UI
+- CSS Safe Area를 활용한 iPhone 노치·홈 인디케이터 영역 대응
+- `prefers-reduced-motion`을 활용한 사용자 모션 감소 설정 대응
 
 > 예상 도보 시간은 좌표 간 거리 기반 추정치이며 실제 도보 경로를 계산한 값은 아님.
 
 ## 기술 스택
 
-| 구분         | 사용 기술                           | 역할                                                                |
-| ------------ | ----------------------------------- | ------------------------------------------------------------------- |
-| 프레임워크   | Next.js (App Router), React         | 화면 구성, 서버 API Route                                           |
-| 언어         | TypeScript                          | 컴포넌트 및 데이터 타입 관리                                        |
-| 스타일       | Tailwind CSS, Wanted Sans           | 반응형 UI, 웹폰트                                                   |
-| 전역 상태    | Zustand                             | 지도, 즐겨찾기, 검색 기록, 토스트 상태                              |
-| 데이터 패칭  | TanStack Query                      | API 요청, 캐싱, 키워드 검색 페이지 관리                             |
-| 데이터 저장  | localStorage                        | 브라우저 내 데이터 저장                                             |
-| 데이터 검증  | Zod                                 | 검색 기록 및 공유 검색 데이터 스키마                                |
-| 지도         | Kakao Maps JavaScript SDK           | 지도, 마커, 검색 반경 표시                                          |
-| 장소 데이터  | Google Places API                   | 음식점 검색 및 장소 정보 조회                                       |
-| 최적화       | Debounce (Custom Hook)              | 지역·음식점 검색어 입력 및 검색 반경 변경 시 불필요한 API 요청 감소 |
-| 기타         | Geolocation API, Tabler Icons React | 위치 조회, 아이콘                                                   |
-| 개발 및 배포 | Git, GitHub, Vercel                 | 버전 관리, 디버깅, 배포                                             |
+| 구분             | 사용 기술                             | 역할                                                                |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------------- |
+| 프레임워크       | Next.js (App Router), React           | 화면 구성, 서버 API Route                                           |
+| 언어             | TypeScript                            | 컴포넌트 및 데이터 타입 관리                                        |
+| 스타일           | Tailwind CSS, Wanted Sans             | 반응형 UI, 웹폰트                                                   |
+| 전역 상태        | Zustand                               | 지도, 즐겨찾기, 검색 기록, 토스트 상태                              |
+| 데이터 패칭      | TanStack Query                        | API 요청, 캐싱, 키워드 검색 페이지 관리                             |
+| 데이터 저장      | localStorage                          | 브라우저 내 데이터 저장                                             |
+| 데이터 검증      | Zod                                   | 검색 기록 및 공유 검색 데이터 스키마                                |
+| 지도             | Kakao Maps JavaScript SDK             | 지도, 마커, 검색 반경 표시                                          |
+| 장소 데이터      | Google Places API                     | 음식점 검색 및 장소 정보 조회                                       |
+| 접근성/기기 대응 | CSS Safe Area, prefers-reduced-motion | iOS 안전 영역 및 사용자 모션 감소 설정 대응                         |
+| 최적화           | Debounce (Custom Hook)                | 지역·음식점 검색어 입력 및 검색 반경 변경 시 불필요한 API 요청 감소 |
+| 기타             | Geolocation API, Tabler Icons React   | 위치 조회, 아이콘                                                   |
+| 개발 및 배포     | Git, GitHub, Vercel                   | 버전 관리, 디버깅, 배포                                             |
 
 ## 프로젝트 파일 구조
 
