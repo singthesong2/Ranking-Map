@@ -7,6 +7,11 @@ type MapLoadStatus = "loading" | "ready" | "error";
 
 const MAP_LOAD_TIMEOUT = 15000;
 
+const DEFAULT_MAP_CENTER = {
+  latitude: 37.5665,
+  longitude: 126.978,
+};
+
 export function useKakaoMapLoader(
   mapContainerRef: RefObject<HTMLDivElement | null>,
   initialLatitude: number | null,
@@ -33,12 +38,12 @@ export function useKakaoMapLoader(
 
     const handleFailure = () => {
       if (cancelled || finished) return;
-
       finished = true;
       setStatus("error");
     };
 
     const timeoutId = window.setTimeout(handleFailure, MAP_LOAD_TIMEOUT);
+
     const handleSdkLoaded = () => {
       if (cancelled || finished) return;
 
@@ -47,6 +52,7 @@ export function useKakaoMapLoader(
           handleFailure();
           return;
         }
+
         window.kakao.maps.load(() => {
           if (cancelled || finished) return;
           if (!window.kakao?.maps?.Map || !window.kakao?.maps?.LatLng) {
@@ -95,13 +101,18 @@ export function useKakaoMapLoader(
     const container = mapContainerRef.current;
 
     if (!sdkReady || !container || mapRef.current) return;
-    if (initialLatitude === null || initialLongitude === null) return;
+
+    const hasInitialPosition =
+      initialLatitude !== null && initialLongitude !== null;
+    const latitude = hasInitialPosition
+      ? initialLatitude
+      : DEFAULT_MAP_CENTER.latitude;
+    const longitude = hasInitialPosition
+      ? initialLongitude
+      : DEFAULT_MAP_CENTER.longitude;
 
     try {
-      const center = new window.kakao.maps.LatLng(
-        initialLatitude,
-        initialLongitude,
-      );
+      const center = new window.kakao.maps.LatLng(latitude, longitude);
       mapRef.current = new window.kakao.maps.Map(container, {
         center,
         level: 3,
@@ -120,7 +131,6 @@ export function useKakaoMapLoader(
 
   const retry = () => {
     if (status !== "error") return;
-
     setStatus("loading");
     setRetryCount((prev) => prev + 1);
   };
